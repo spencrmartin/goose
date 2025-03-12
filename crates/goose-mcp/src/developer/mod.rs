@@ -309,7 +309,7 @@ impl DeveloperRouter {
         };
 
         // Store the essential tip base that we may add conditionally
-        let essential_tip_base = indoc! {r#"ESSENTIAL: Before you begin, explore the directory and code you will work on.
+        let essential_tip_base = indoc! {r#"ESSENTIAL: Before you begin, explore the directory and code you will work on, and think about the project.
         File extensions, directory structure can help."#};
 
         // Check if a .git directory exists in the current directory
