@@ -307,17 +307,20 @@ impl DeveloperRouter {
                 cwd=cwd.to_string_lossy(),
             },
         };
-        
+
         // Store the essential tip base that we may add conditionally
-        let essential_tip_base = indoc! {r#"ESSENTIAL: Before you begin, explore the directory and code you will work on. 
-File extensions, directory structure can help."#};
-        
+        let essential_tip_base = indoc! {r#"ESSENTIAL: Before you begin, explore the directory and code you will work on.
+        File extensions, directory structure can help."#};
+
         // Check if a .git directory exists in the current directory
         let git_dir_exists = cwd.join(".git").is_dir();
-        
+
         // Create the full essential tip, conditionally including the git part
         let essential_tip = if git_dir_exists {
-            format!("{}\nYou can also look at recent changes if a git repository is present as they may indicate areas to work in.", essential_tip_base)
+            format!(
+                "{}\nLook at recent git changes as they may indicate areas to work on.",
+                essential_tip_base
+            )
         } else {
             essential_tip_base.to_string()
         };
@@ -363,7 +366,7 @@ File extensions, directory structure can help."#};
         // - If there's no local .goosehints file, add it
         // - If there is a local .goosehints file, don't add it
         let mut final_instructions = base_instructions.clone();
-        
+
         // Add essential tip if no local hints exist
         if !local_hints_exist {
             // Ensure there's a newline before adding the essential tip
@@ -377,12 +380,12 @@ File extensions, directory structure can help."#};
             final_instructions.push_str(&essential_tip);
             final_instructions.push_str("\n\n");
         }
-        
+
         // Add any hints that were collected
         if !hints.is_empty() {
             final_instructions.push_str(&hints);
         }
-        
+
         let instructions = final_instructions;
 
         let mut builder = GitignoreBuilder::new(cwd.clone());
@@ -1196,7 +1199,7 @@ mod tests {
 
         // The essential tip should include git-related information
         assert!(instructions.contains("ESSENTIAL: Before you begin"));
-        assert!(instructions.contains("You can also look at recent changes if a git repository is present"));
+        assert!(instructions.contains("Look at recent git changes"));
     }
 
     #[test]
@@ -1212,7 +1215,7 @@ mod tests {
 
         // The essential tip should not include git-related information
         assert!(instructions.contains("ESSENTIAL: Before you begin"));
-        assert!(!instructions.contains("You can also look at recent changes if a git repository is present"));
+        assert!(!instructions.contains("Look at recent git changes"));
     }
 
     #[test]
@@ -1230,7 +1233,7 @@ mod tests {
         // The essential tip should not be included when a local .goosehints exists
         assert!(!instructions.contains("ESSENTIAL: Before you begin"));
     }
-    
+
     #[test]
     #[serial]
     fn test_goosehints_when_missing() {
