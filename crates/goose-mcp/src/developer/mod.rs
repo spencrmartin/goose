@@ -309,8 +309,10 @@ impl DeveloperRouter {
         };
 
         // Store the essential tip base that we may add conditionally
-        let essential_tip_base = indoc! {r#"ESSENTIAL: Before you begin, explore the directory and code you will work on, and think about the project.
-        File extensions, directory structure can help."#};
+        let essential_tip_base = indoc! {r#"
+        ESSENTIAL: Before you begin, explore the directory and code you will work on, and think about the project.
+        File extensions, directory structure can help.
+        "#};
 
         // Check if a .git directory exists in the current directory
         let git_dir_exists = cwd.join(".git").is_dir();
@@ -369,16 +371,7 @@ impl DeveloperRouter {
 
         // Add essential tip if no local hints exist
         if !local_hints_exist {
-            // Ensure there's a newline before adding the essential tip
-            if !final_instructions.ends_with("\n\n") {
-                if final_instructions.ends_with('\n') {
-                    final_instructions.push('\n');
-                } else {
-                    final_instructions.push_str("\n\n");
-                }
-            }
             final_instructions.push_str(&essential_tip);
-            final_instructions.push_str("\n\n");
         }
 
         // Add any hints that were collected
