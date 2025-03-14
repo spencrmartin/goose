@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Button } from '../ui/button';
-import { Switch } from '../ui/switch';
+import { Button } from '../../ui/button';
+import { Switch } from '../../ui/switch';
 import { Plus, X } from 'lucide-react';
-import { Gear } from '../icons/Gear';
-import { GPSIcon } from '../ui/icons';
-import { useConfig } from '../ConfigContext';
-import Modal from '../Modal';
-import { Input } from '../ui/input';
+import { Gear } from '../../icons/Gear';
+import { GPSIcon } from '../../ui/icons';
+import { useConfig } from '../../ConfigContext';
+import Modal from '../../Modal';
+import { Input } from '../../ui/input';
 import Select from 'react-select';
-import { createDarkSelectStyles, darkSelectTheme } from '../ui/select-styles';
+import { createDarkSelectStyles, darkSelectTheme } from '../../ui/select-styles';
 
 interface ExtensionConfig {
   args?: string[];
@@ -16,7 +16,7 @@ interface ExtensionConfig {
   enabled: boolean;
   envs?: Record<string, string>;
   name: string;
-  type: 'stdio' | 'sse';
+  type: 'stdio' | 'sse' | 'builtin';
 }
 
 interface ExtensionItem {
@@ -50,7 +50,7 @@ const getSubtitle = (config: ExtensionConfig): string => {
 };
 
 export default function ExtensionsSection() {
-  const { config, updateExtension, addExtension } = useConfig();
+  const { config, read, updateExtension, addExtension } = useConfig();
   const [extensions, setExtensions] = useState<ExtensionItem[]>([]);
   const [selectedExtension, setSelectedExtension] = useState<ExtensionItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -74,23 +74,22 @@ export default function ExtensionsSection() {
   });
 
   useEffect(() => {
-    if (config.extensions) {
-      const extensionItems: ExtensionItem[] = Object.entries(config.extensions).map(
-        ([name, ext]) => {
-          const extensionConfig = ext as ExtensionConfig;
-          return {
-            id: name,
-            title: getFriendlyTitle(name),
-            subtitle: getSubtitle(extensionConfig),
-            enabled: extensionConfig.enabled,
-            canConfigure: extensionConfig.type === 'stdio' && !!extensionConfig.envs,
-            config: extensionConfig,
-          };
-        }
-      );
+    const extensions = read('extensions', false);
+    if (extensions) {
+      const extensionItems: ExtensionItem[] = Object.entries(extensions).map(([name, ext]) => {
+        const extensionConfig = ext as ExtensionConfig;
+        return {
+          id: name,
+          title: getFriendlyTitle(name),
+          subtitle: getSubtitle(extensionConfig),
+          enabled: extensionConfig.enabled,
+          canConfigure: extensionConfig.type === 'stdio' && !!extensionConfig.envs,
+          config: extensionConfig,
+        };
+      });
       setExtensions(extensionItems);
     }
-  }, [config.extensions]);
+  }, [read]);
 
   useEffect(() => {
     if (selectedExtension) {
