@@ -743,6 +743,7 @@ impl Capabilities {
         let extension_name = arguments.get("extension_name").and_then(|v| v.as_str()).unwrap_or("");
         let extension_name = extension_name.to_string();
         println!("Installing extension: {}", extension_name);
+        // self.add_extension(extension_name).await;
         Ok(vec![])
     }
 }

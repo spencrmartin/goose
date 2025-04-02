@@ -53,14 +53,8 @@ impl ExtensionManager {
             }
             Err(e) => return Err(e.into()),
         };
-
-        Ok(extensions.get(key).and_then(|entry| {
-            if entry.enabled {
-                Some(entry.config.clone())
-            } else {
-                None
-            }
-        }))
+        // Return all entries whether or not they are enabled
+        Ok(extensions.get(key).map(|entry| entry.config.clone()))
     }
 
     /// Set or update an extension configuration

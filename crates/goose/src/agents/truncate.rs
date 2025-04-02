@@ -278,9 +278,9 @@ impl Agent for TruncateAgent {
         if capabilities.supports_resources() {
             tools.push(read_resource_tool);
             tools.push(list_resources_tool);
-            tools.push(discover_extensions_tool);
-            tools.push(install_extension_tool);
         }
+        tools.push(discover_extensions_tool);
+        tools.push(install_extension_tool);
 
         let config = capabilities.provider().get_model_config();
         let mut system_prompt = capabilities.get_system_prompt().await;
