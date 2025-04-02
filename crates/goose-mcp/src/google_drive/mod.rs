@@ -380,7 +380,7 @@ impl GoogleDriveRouter {
         let update_tool = Tool::new(
             "update".to_string(),
             indoc! {r#"
-                Update a Google Drive file with new content.
+                Update a normal non-Google file (not Document, Spreadsheet, and Slides) in Google Drive with new content.
             "#}
             .to_string(),
             json!({
@@ -410,7 +410,7 @@ impl GoogleDriveRouter {
               "required": ["fileId", "mimeType"],
             }),
             Some(ToolAnnotations {
-                title: Some("Update a file".to_string()),
+                title: Some("Update a non-Google file".to_string()),
                 read_only_hint: false,
                 destructive_hint: true,
                 idempotent_hint: false,
@@ -452,7 +452,7 @@ impl GoogleDriveRouter {
               "required": ["fileId", "fileType"],
             }),
             Some(ToolAnnotations {
-                title: Some("Update a file".to_string()),
+                title: Some("Update a Google file".to_string()),
                 read_only_hint: false,
                 destructive_hint: true,
                 idempotent_hint: false,
