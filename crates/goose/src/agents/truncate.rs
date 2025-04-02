@@ -2,7 +2,7 @@
 /// It makes no attempt to handle context limits, and cannot read resources
 use async_trait::async_trait;
 use futures::stream::BoxStream;
-use mcp_core::tool::ToolAnnotations;
+use mcp_core::tool::{Tool, ToolAnnotations};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -31,7 +31,7 @@ use anyhow::{anyhow, Result};
 use indoc::indoc;
 use mcp_core::prompt::Prompt;
 use mcp_core::protocol::GetPromptResult;
-use mcp_core::{tool::Tool, Content, ToolError};
+use mcp_core::{Content, ToolError};
 use serde_json::{json, Value};
 use std::time::Duration;
 
@@ -230,9 +230,56 @@ impl Agent for TruncateAgent {
             }),
         );
 
+        let discover_extensions_tool = Tool::new(
+            "platform__discover_extensions".to_string(),
+            "Discover additional capabilities to help complete tasks.
+            Lists extensions that are available but not currently active.
+            Use this tool when you're unable to find a specific feature or functionality, or when standard approaches aren't working.
+            These extensions might provide the exact tools needed to solve your problem.
+            If you find a relevant one, suggest that the user enable the extension.
+            Also lists extensions curated by the Goose team that can be installed. To install them, direct the user to install them via the Goose Settings UI or the Goose CLI configure command with the command they will need to configure/add the extension. They cannot just enter the command directly into terminal to install.
+            They will have to go through the CLI or the Settings UI outside of the current Goose session.
+            You have a preference for suggesting the user enable any already-installed relevant extensions and otherwise installing the relevant extension.".to_string(),
+            json!({
+                "type": "object",
+                "required": [],
+                "properties": {}
+            }),
+            Some(ToolAnnotations {
+                title: Some("Discover extensions".to_string()),
+                read_only_hint: true,
+                destructive_hint: false,
+                idempotent_hint: false,
+                open_world_hint: false,
+            }),
+        );
+
+        let install_extension_tool = Tool::new(
+            "platform__install_extension".to_string(),
+            "Install additional capabilities to help complete tasks.
+            Install an extension by providing the extension name.
+            ".to_string(),
+            json!({
+                "type": "object",
+                "required": ["extension_name"],
+                "properties": {
+                    "extension_name": {"type": "string", "description": "The name of the extension to install"}
+                }
+            }),
+            Some(ToolAnnotations {
+                title: Some("Install extensions".to_string()),
+                read_only_hint: true,
+                destructive_hint: false,
+                idempotent_hint: false,
+                open_world_hint: false,
+            }),
+        );
+
         if capabilities.supports_resources() {
             tools.push(read_resource_tool);
             tools.push(list_resources_tool);
+            tools.push(discover_extensions_tool);
+            tools.push(install_extension_tool);
         }
 
         let config = capabilities.provider().get_model_config();
@@ -306,20 +353,38 @@ impl Agent for TruncateAgent {
                             break;
                         }
 
+                        // Split tool requests into install_extension and others
+                        let (install_requests, non_install_requests): (Vec<_>, Vec<_>) = tool_requests.clone()
+                            .into_iter()
+                            .partition(|req| {
+                                req.tool_call.as_ref()
+                                    .map(|call| call.name == "platform__install_extension")
+                                    .unwrap_or(false)
+                            });
+
                         // Process tool requests depending on goose_mode
                         let mut message_tool_response = Message::user();
                         // Clone goose_mode once before the match to avoid move issues
                         let mode = goose_mode.clone();
-                        match mode.as_str() {
-                            "approve" | "smart_approve" => {
-                                let mut read_only_tools = Vec::new();
-                                let mut needs_confirmation = Vec::<&ToolRequest>::new();
-                                let mut approved_tools = Vec::new();
 
-                                // First check permissions for all tools
+                        // If there are install extension requests, always require confirmation
+                        // or if goose_mode is approve or smart_approve, check permissions for all tools
+                        if !install_requests.is_empty() || mode.as_str() == "approve" || mode.as_str() == "smart_approve" {
+                            let mut read_only_tools = Vec::new();
+                            let mut needs_confirmation = Vec::<&ToolRequest>::new();
+                            let mut approved_tools = Vec::new();
+
+                            // If there are install extension requests, always require confirmation
+                            if !install_requests.is_empty() {
+                                // Special handling for install extension - always require confirmation
+                                needs_confirmation.extend(install_requests.iter());
+                            };
+                            // If approve mode or smart approve mode, check permissions for all tools
+                            if mode.as_str() == "approve" || mode.as_str() == "smart_approve" {
                                 let store = ToolPermissionStore::load()?;
-                                for request in tool_requests.iter() {
+                                for request in &non_install_requests {
                                     if let Ok(tool_call) = request.tool_call.clone() {
+                                        // Regular permission checking for other tools
                                         if let Some(allowed) = store.check_permission(request) {
                                             if allowed {
                                                 // Instead of executing immediately, collect approved tools
@@ -332,112 +397,117 @@ impl Agent for TruncateAgent {
                                         }
                                     }
                                 }
-
-                                // Only check read-only status for tools needing confirmation
-                                if !needs_confirmation.is_empty() && mode == "smart_approve" {
-                                    read_only_tools = detect_read_only_tools(&capabilities, needs_confirmation.clone()).await;
+                            }
+                            // Only check read-only status for tools needing confirmation
+                            if !needs_confirmation.is_empty() && mode == "smart_approve" {
+                                read_only_tools = detect_read_only_tools(&capabilities, needs_confirmation.clone()).await;
+                                // Remove install extensions from read-only tools
+                                if !install_requests.is_empty() {
+                                    read_only_tools.retain(|tool_name| {
+                                        !install_requests.iter().any(|req| {
+                                            req.tool_call.as_ref()
+                                                .map(|call| call.name == *tool_name)
+                                                .unwrap_or(false)
+                                        })
+                                    });
                                 }
-
-                                // Handle pre-approved and read-only tools in parallel
-                                let mut tool_futures = Vec::new();
-
-                                // Add pre-approved tools
-                                for (request_id, tool_call) in approved_tools {
-                                    let tool_future = Self::create_tool_future(&capabilities, tool_call, request_id.clone());
-                                    tool_futures.push(tool_future);
-                                }
-
-                                // Process read-only tools
-                                for request in &needs_confirmation {
-                                    if let Ok(tool_call) = request.tool_call.clone() {
-                                        // Skip confirmation if the tool_call.name is in the read_only_tools list
-                                        if read_only_tools.contains(&tool_call.name) {
-                                            let tool_future = Self::create_tool_future(&capabilities, tool_call, request.id.clone());
-                                            tool_futures.push(tool_future);
+                            }
+                            // Handle pre-approved and read-only tools in parallel
+                            let mut tool_futures = Vec::new();
+                            // Add pre-approved tools
+                            for (request_id, tool_call) in approved_tools {
+                                let tool_future = Self::create_tool_future(&capabilities, tool_call, request_id.clone());
+                                tool_futures.push(tool_future);
+                            }
+                            // Process read-only tools
+                            for request in &needs_confirmation {
+                                if let Ok(tool_call) = request.tool_call.clone() {
+                                    // Skip confirmation if the tool_call.name is in the read_only_tools list
+                                    if read_only_tools.contains(&tool_call.name) {
+                                        let tool_future = Self::create_tool_future(&capabilities, tool_call, request.id.clone());
+                                        tool_futures.push(tool_future);
+                                    } else {
+                                        let message = if install_requests.iter().any(|req| req.id == request.id) {
+                                            "Goose would like to install the following extension. Allow? (y/n):".to_string()
                                         } else {
-                                            let confirmation = Message::user().with_tool_confirmation_request(
-                                                request.id.clone(),
-                                                tool_call.name.clone(),
-                                                tool_call.arguments.clone(),
-                                                Some("Goose would like to call the above tool. Allow? (y/n):".to_string()),
-                                            );
-                                            yield confirmation;
-
-                                            // Wait for confirmation response through the channel
-                                            let mut rx = self.confirmation_rx.lock().await;
-                                            while let Some((req_id, confirmed)) = rx.recv().await {
-                                                if req_id == request.id {
-                                                    // Store the user's response with 30-day expiration
-                                                    let mut store = ToolPermissionStore::load()?;
-                                                    store.record_permission(request, confirmed, Some(Duration::from_secs(30 * 24 * 60 * 60)))?;
-
-                                                    if confirmed {
-                                                        // Add this tool call to the futures collection
-                                                        let tool_future = Self::create_tool_future(&capabilities, tool_call, request.id.clone());
-                                                        tool_futures.push(tool_future);
-                                                    } else {
-                                                        // User declined - add declined response
-                                                        message_tool_response = message_tool_response.with_tool_response(
-                                                            request.id.clone(),
-                                                            Ok(vec![Content::text("User declined to run this tool. Don't try to make the same tool call again. If there is no other ways to do it, it is ok to stop.")]),
-                                                        );
-                                                    }
-                                                    break; // Exit the loop once the matching `req_id` is found
+                                            "Goose would like to call the above tool. Allow? (y/n):".to_string()
+                                        };
+                                        let confirmation = Message::user().with_tool_confirmation_request(
+                                            request.id.clone(),
+                                            tool_call.name.clone(),
+                                            tool_call.arguments.clone(),
+                                            Some(message),
+                                        );
+                                        yield confirmation;
+                                        // Wait for confirmation response through the channel
+                                        let mut rx = self.confirmation_rx.lock().await;
+                                        while let Some((req_id, confirmed)) = rx.recv().await {
+                                            if req_id == request.id {
+                                                // Store the user's response with 30-day expiration
+                                                let mut store = ToolPermissionStore::load()?;
+                                                store.record_permission(request, confirmed, Some(Duration::from_secs(30 * 24 * 60 * 60)))?;
+                                                if confirmed {
+                                                    // Add this tool call to the futures collection
+                                                    let tool_future = Self::create_tool_future(&capabilities, tool_call, request.id.clone());
+                                                    tool_futures.push(tool_future);
+                                                } else {
+                                                    // User declined - add declined response
+                                                    message_tool_response = message_tool_response.with_tool_response(
+                                                        request.id.clone(),
+                                                        Ok(vec![Content::text("User declined to run this tool. Don't try to make the same tool call again. If there is no other ways to do it, it is ok to stop.")]),
+                                                    );
                                                 }
+                                                break; // Exit the loop once the matching `req_id` is found
                                             }
                                         }
                                     }
                                 }
-                                // Wait for all tool calls to complete
-                                let results = futures::future::join_all(tool_futures).await;
-                                for (request_id, output) in results {
-                                    message_tool_response = message_tool_response.with_tool_response(
-                                        request_id,
-                                        output,
-                                    );
-                                }
-                            },
-                            "chat" => {
-                                // Skip all tool calls in chat mode
-                                for request in &tool_requests {
-                                    message_tool_response = message_tool_response.with_tool_response(
-                                        request.id.clone(),
-                                        Ok(vec![Content::text(
-                                            "Let the user know the tool call was skipped in Goose chat mode. \
-                                            DO NOT apologize for skipping the tool call. DO NOT say sorry. \
-                                            Provide an explanation of what the tool call would do, structured as a \
-                                            plan for the user. Again, DO NOT apologize. \
-                                            **Example Plan:**\n \
-                                            1. **Identify Task Scope** - Determine the purpose and expected outcome.\n \
-                                            2. **Outline Steps** - Break down the steps.\n \
-                                            If needed, adjust the explanation based on user preferences or questions."
-                                        )]),
-                                    );
-                                }
-                            },
-                            _ => {
-                                if mode != "auto" {
-                                    warn!("Unknown GOOSE_MODE: {mode:?}. Defaulting to 'auto' mode.");
-                                }
-                                // Process tool requests in parallel
-                                let mut tool_futures = Vec::new();
-                                for request in &tool_requests {
-                                    if let Ok(tool_call) = request.tool_call.clone() {
-                                        let tool_future = Self::create_tool_future(&capabilities, tool_call, request.id.clone());
-                                        tool_futures.push(tool_future);
-                                    }
-                                }
-                                // Wait for all tool calls to complete
-                                let results = futures::future::join_all(tool_futures).await;
-                                for (request_id, output) in results {
-                                    message_tool_response = message_tool_response.with_tool_response(
-                                        request_id,
-                                        output,
-                                    );
+                            }
+                            // Wait for all tool calls to complete
+                            let results = futures::future::join_all(tool_futures).await;
+                            for (request_id, output) in results {
+                                message_tool_response = message_tool_response.with_tool_response(
+                                    request_id,
+                                    output,
+                                );
+                            }
+                        };
+                        if mode.as_str() == "chat" {
+                            // Skip all tool calls in chat mode
+                            for request in &non_install_requests {
+                                message_tool_response = message_tool_response.with_tool_response(
+                                    request.id.clone(),
+                                    Ok(vec![Content::text(
+                                        "Let the user know the tool call was skipped in Goose chat mode. \
+                                        DO NOT apologize for skipping the tool call. DO NOT say sorry. \
+                                        Provide an explanation of what the tool call would do, structured as a \
+                                        plan for the user. Again, DO NOT apologize. \
+                                        **Example Plan:**\n \
+                                        1. **Identify Task Scope** - Determine the purpose and expected outcome.\n \
+                                        2. **Outline Steps** - Break down the steps.\n \
+                                        If needed, adjust the explanation based on user preferences or questions."
+                                    )]),
+                                );
+                            }
+                        };
+                        if mode.as_str() == "auto" {
+                            // Process tool requests in parallel
+                            let mut tool_futures = Vec::new();
+                            for request in &non_install_requests {
+                                if let Ok(tool_call) = request.tool_call.clone() {
+                                    let tool_future = Self::create_tool_future(&capabilities, tool_call, request.id.clone());
+                                    tool_futures.push(tool_future);
                                 }
                             }
+                            // Wait for all tool calls to complete
+                            let results = futures::future::join_all(tool_futures).await;
+                            for (request_id, output) in results {
+                                message_tool_response = message_tool_response.with_tool_response(
+                                    request_id,
+                                    output,
+                                );
+                            }
                         }
-
                         yield message_tool_response.clone();
 
                         messages.push(response);
