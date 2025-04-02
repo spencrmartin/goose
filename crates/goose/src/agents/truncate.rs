@@ -16,7 +16,7 @@ use super::Agent;
 use crate::agents::capabilities::{get_parameter_names, Capabilities};
 use crate::agents::extension::{ExtensionConfig, ExtensionResult};
 use crate::agents::ToolPermissionStore;
-use crate::config::Config;
+use crate::config::{Config, ExtensionManager};
 use crate::message::{Message, ToolRequest};
 use crate::providers::base::Provider;
 use crate::providers::errors::ProviderError;
@@ -122,6 +122,18 @@ impl TruncateAgent {
     ) -> (String, Result<Vec<Content>, ToolError>) {
         let output = capabilities.dispatch_tool_call(tool_call).await;
         (request_id, output)
+    }
+
+    async fn install_extension(
+        capabilities: &mut Capabilities,
+        extension_name: String,
+        request_id: String,
+    ) -> (String, Result<Vec<Content>, ToolError>) {
+        let config = ExtensionManager::get_config(&extension_name).unwrap().unwrap();
+        let result = capabilities.add_extension(config).await
+            .map(|_| vec![Content::text("Extension installed successfully")])
+            .map_err(|e| ToolError::ExecutionError(e.to_string()));
+        (request_id, result)
     }
 }
 
@@ -374,11 +386,6 @@ impl Agent for TruncateAgent {
                             let mut needs_confirmation = Vec::<&ToolRequest>::new();
                             let mut approved_tools = Vec::new();
 
-                            // If there are install extension requests, always require confirmation
-                            if !install_requests.is_empty() {
-                                // Special handling for install extension - always require confirmation
-                                needs_confirmation.extend(install_requests.iter());
-                            };
                             // If approve mode or smart approve mode, check permissions for all tools
                             if mode.as_str() == "approve" || mode.as_str() == "smart_approve" {
                                 let store = ToolPermissionStore::load()?;
@@ -412,14 +419,47 @@ impl Agent for TruncateAgent {
                                     });
                                 }
                             }
+
                             // Handle pre-approved and read-only tools in parallel
                             let mut tool_futures = Vec::new();
+                            let mut install_results = Vec::new();
+
+                            // Handle install extension requests
+                            for request in &install_requests {
+                                if let Ok(tool_call) = request.tool_call.clone() {
+                                    let message = "Goose would like to install the following extension. Allow? (y/n):".to_string();
+                                    let confirmation = Message::user().with_tool_confirmation_request(
+                                        request.id.clone(),
+                                        tool_call.name.clone(),
+                                        tool_call.arguments.clone(),
+                                        Some(message),
+                                    );
+                                    yield confirmation;
+
+                                    let mut rx = self.confirmation_rx.lock().await;
+                                    while let Some((req_id, confirmed)) = rx.recv().await {
+                                        if req_id == request.id {
+                                            if confirmed {
+                                                let extension_name = tool_call.arguments.get("extension_name")
+                                                    .and_then(|v| v.as_str())
+                                                    .unwrap_or("")
+                                                    .to_string();
+                                                let install_result = Self::install_extension(&mut capabilities, extension_name, request.id.clone()).await;
+                                                install_results.push(install_result);
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
                             // Add pre-approved tools
                             for (request_id, tool_call) in approved_tools {
                                 let tool_future = Self::create_tool_future(&capabilities, tool_call, request_id.clone());
                                 tool_futures.push(tool_future);
                             }
-                            // Process read-only tools
+
+                            // Handle tools that need confirmation
                             for request in &needs_confirmation {
                                 if let Ok(tool_call) = request.tool_call.clone() {
                                     // Skip confirmation if the tool_call.name is in the read_only_tools list
@@ -427,11 +467,7 @@ impl Agent for TruncateAgent {
                                         let tool_future = Self::create_tool_future(&capabilities, tool_call, request.id.clone());
                                         tool_futures.push(tool_future);
                                     } else {
-                                        let message = if install_requests.iter().any(|req| req.id == request.id) {
-                                            "Goose would like to install the following extension. Allow? (y/n):".to_string()
-                                        } else {
-                                            "Goose would like to call the above tool. Allow? (y/n):".to_string()
-                                        };
+                                        let message = "Goose would like to call the above tool. Allow? (y/n):".to_string();
                                         let confirmation = Message::user().with_tool_confirmation_request(
                                             request.id.clone(),
                                             tool_call.name.clone(),
@@ -469,6 +505,12 @@ impl Agent for TruncateAgent {
                                 message_tool_response = message_tool_response.with_tool_response(
                                     request_id,
                                     output,
+                                );
+                            }
+                            for (request_id, output) in install_results {
+                                message_tool_response = message_tool_response.with_tool_response(
+                                    request_id,
+                                    output
                                 );
                             }
                         };
