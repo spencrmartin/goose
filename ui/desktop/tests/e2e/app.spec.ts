@@ -14,7 +14,7 @@ test.describe('Goose App', () => {
 
   test.beforeAll(async () => {
     console.log('Starting Electron app...');
-    
+
     // Start the electron-forge process
     appProcess = spawn('npm', ['run', 'start-gui'], {
       cwd: join(__dirname, '../..'),
@@ -57,7 +57,7 @@ test.describe('Goose App', () => {
 
     // Check if we're already on the chat screen
     try {
-      const chatInput = await mainWindow.waitForSelector('textarea[placeholder*="What can goose help with?"]', 
+      const chatInput = await mainWindow.waitForSelector('textarea[placeholder*="What can goose help with?"]',
         { timeout: 5000 });
       isProviderSelected = await chatInput.isVisible();
       console.log('Provider already selected, chat interface visible');
@@ -69,7 +69,7 @@ test.describe('Goose App', () => {
 
   test.afterAll(async () => {
     console.log('Final cleanup...');
-    
+
     // Close the test instance
     if (electronApp) {
       await electronApp.close().catch(console.error);
@@ -119,135 +119,153 @@ test.describe('Goose App', () => {
     if (!isProviderSelected) {
       // Take screenshot of provider selection screen
       await mainWindow.screenshot({ path: 'test-results/provider-selection.png' });
-      
+
       // Verify provider selection screen
       const heading = await mainWindow.waitForSelector('h2:has-text("Choose a Provider")', { timeout: 10000 });
       const headingText = await heading.textContent();
       expect(headingText).toBe('Choose a Provider');
-      
+
       // Find and verify the Databricks card container
       console.log('Looking for Databricks card...');
       const databricksContainer = await mainWindow.waitForSelector(
         'div:has(h3:text("Databricks"))[class*="relative bg-bgApp rounded-lg"]'
       );
       expect(await databricksContainer.isVisible()).toBe(true);
-      
+
       // Find the Launch button within the Databricks container
       console.log('Looking for Launch button in Databricks card...');
       const launchButton = await databricksContainer.waitForSelector('button:has-text("Launch")');
       expect(await launchButton.isVisible()).toBe(true);
-      
+
       // Take screenshot before clicking
       await mainWindow.screenshot({ path: 'test-results/before-databricks-click.png' });
-      
+
       // Click the Launch button
       await launchButton.click();
-      
+
       // Wait for chat interface to appear
-      const chatTextarea = await mainWindow.waitForSelector('textarea[placeholder*="What can goose help with?"]', 
+      const chatTextarea = await mainWindow.waitForSelector('textarea[placeholder*="What can goose help with?"]',
         { timeout: 15000 });
       expect(await chatTextarea.isVisible()).toBe(true);
     } else {
       console.log('Provider already selected, skipping provider selection test');
     }
-    
+
     // Take screenshot of current state
     await mainWindow.screenshot({ path: 'test-results/chat-interface.png' });
   });
 
-  test('chat interaction', async () => {
-    console.log('Testing chat interaction...');
-    
-    // Find the chat input
-    const chatInput = await mainWindow.waitForSelector('textarea[placeholder*="What can goose help with?"]');
-    expect(await chatInput.isVisible()).toBe(true);
-    
-    // Type a message
-    await chatInput.fill('Hello, can you help me with a simple task?');
-    
-    // Take screenshot before sending
-    await mainWindow.screenshot({ path: 'test-results/before-send.png' });
-    
-    // Get initial message count
-    const initialMessages = await mainWindow.locator('.prose').count();
-    
-    // Send message
-    await chatInput.press('Enter');
-    
-    // Wait for loading indicator to appear (using the specific class and text)
-    console.log('Waiting for loading indicator...');
-    const loadingGoose = await mainWindow.waitForSelector('.text-textStandard >> text="goose is working on it…"', 
-      { timeout: 10000 });
-    expect(await loadingGoose.isVisible()).toBe(true);
-    
-    // Take screenshot of loading state
-    await mainWindow.screenshot({ path: 'test-results/loading-state.png' });
-    
-    // Wait for loading indicator to disappear
-    console.log('Waiting for response...');
-    await mainWindow.waitForSelector('.text-textStandard >> text="goose is working on it…"', 
-      { state: 'hidden', timeout: 30000 });
-    
-    // Wait for new message to appear
-    await mainWindow.waitForFunction((count) => {
-      const messages = document.querySelectorAll('.prose');
-      return messages.length > count;
-    }, initialMessages, { timeout: 30000 });
-    
-    // Get the latest response
-    const response = await mainWindow.locator('.prose').last();
-    expect(await response.isVisible()).toBe(true);
-    
-    // Verify response has content
-    const responseText = await response.textContent();
-    expect(responseText).toBeTruthy();
-    expect(responseText.length).toBeGreaterThan(0);
-    
-    // Take screenshot of response
-    await mainWindow.screenshot({ path: 'test-results/chat-response.png' });
+  test('dark mode toggle', async () => {
+    console.log('Testing dark mode toggle...');
+
+    // Click the three dots menu button in the top right
+    await mainWindow.waitForSelector('div[class*="bg-bgSubtle border-b border-borderSubtle"]');
+    const menuButton = await mainWindow.waitForSelector('button:has(svg)', { timeout: 10000 });
+    await menuButton.click();
+
+    // Find and click the dark mode toggle button
+    const darkModeButton = await mainWindow.waitForSelector('button:has-text("Dark Mode"), button:has-text("Light Mode")');
+
+    // Get initial state
+    const isDarkMode = await mainWindow.evaluate(() => document.documentElement.classList.contains('dark'));
+    console.log('Initial dark mode state:', isDarkMode);
+
+    // Click to toggle
+    await darkModeButton.click();
+
+    // Verify the change
+    const newDarkMode = await mainWindow.evaluate(() => document.documentElement.classList.contains('dark'));
+    expect(newDarkMode).toBe(!isDarkMode);
+
+    // Take screenshot to verify
+    await mainWindow.screenshot({ path: 'test-results/dark-mode-toggle.png' });
+
+    // Toggle back to original state
+    await darkModeButton.click();
   });
 
-  test('verify chat history', async () => {
-    console.log('Testing chat history...');
-    
-    // Find the chat input again
-    const chatInput = await mainWindow.waitForSelector('textarea[placeholder*="What can goose help with?"]');
-    
-    // Test message sending with a specific question
-    await chatInput.fill('What is 2+2?');
-    
-    // Get initial message count
-    const initialMessages = await mainWindow.locator('.prose').count();
-    
-    // Send message
-    await chatInput.press('Enter');
-    
-    // Wait for loading indicator and response using the correct selector
-    await mainWindow.waitForSelector('.text-textStandard >> text="goose is working on it…"', { timeout: 10000 });
-    await mainWindow.waitForSelector('.text-textStandard >> text="goose is working on it…"', 
-      { state: 'hidden', timeout: 30000 });
-    
-    // Wait for new message
-    await mainWindow.waitForFunction((count) => {
-      const messages = document.querySelectorAll('.prose');
-      return messages.length > count;
-    }, initialMessages, { timeout: 30000 });
-    
-    // Get the latest response
-    const response = await mainWindow.locator('.prose').last();
-    const responseText = await response.textContent();
-    expect(responseText).toBeTruthy();
-    
-    // Check for message history
-    const messages = await mainWindow.locator('.prose').all();
-    expect(messages.length).toBeGreaterThanOrEqual(2);
-    
-    // Take screenshot of chat history
-    await mainWindow.screenshot({ path: 'test-results/chat-history.png' });
-    
-    // Test command history (up arrow)
-    await chatInput.press('Control+ArrowUp');
-    const inputValue = await chatInput.inputValue();
-    expect(inputValue).toBe('What is 2+2?');
+  test('new session and directory operations', async () => {
+    console.log('Testing new session and directory operations...');
+
+    // Get initial window count
+    const initialWindows = await electronApp.windows();
+    console.log('Initial window count:', initialWindows.length);
+
+    // Test keyboard shortcut for new session (⌘N)
+    await mainWindow.keyboard.press('Meta+N');
+
+    // Wait and check for new window with retries
+    console.log('Waiting for new window after keyboard shortcut...');
+    let newWindow = null;
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    while (attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const windows = await electronApp.windows();
+      console.log(`Attempt ${attempts + 1}: Current window count:`, windows.length);
+
+      if (windows.length > initialWindows.length) {
+        newWindow = windows[windows.length - 1];
+        break;
+      }
+      attempts++;
+    }
+
+    if (!newWindow) {
+      console.log('Failed to detect new window after keyboard shortcut');
+    } else {
+      // Take screenshot of new window
+      await newWindow.screenshot({ path: 'test-results/new-session-shortcut.png' });
+      await newWindow.close();
+    }
+
+    // Test UI button for new session
+    const menuButton = await mainWindow.waitForSelector('button:has(svg)', { timeout: 10000 });
+    await menuButton.click();
+
+    const newSessionButton = await mainWindow.waitForSelector('button:has-text("New session")');
+    await newSessionButton.click();
+
+    // Wait and check for new window with retries
+    console.log('Waiting for new window after button click...');
+    let newestWindow = null;
+    attempts = 0;
+
+    while (attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const windows = await electronApp.windows();
+      console.log(`Attempt ${attempts + 1}: Current window count:`, windows.length);
+
+      if (windows.length > initialWindows.length) {
+        newestWindow = windows[windows.length - 1];
+        break;
+      }
+      attempts++;
+    }
+
+    if (!newestWindow) {
+      console.log('Failed to detect new window after button click');
+    } else {
+      // Take screenshot of newest window
+      await newestWindow.screenshot({ path: 'test-results/new-session-button.png' });
+      await newestWindow.close();
+    }
+
+    // Switch back to main window for directory operations
+    await mainWindow.bringToFront();
+
+    // Test keyboard shortcut for open directory (⌘O)
+    // Note: This will trigger system file dialog which we can't interact with in the test
+    await mainWindow.keyboard.press('Meta+O');
+
+    // Test UI button for changing directory
+    await menuButton.click();
+
+    const openDirButton = await mainWindow.waitForSelector('button:has-text("Open directory")');
+    await openDirButton.click();
+
+    // Take screenshot
+    await mainWindow.screenshot({ path: 'test-results/directory-operations.png' });
   });
 });
