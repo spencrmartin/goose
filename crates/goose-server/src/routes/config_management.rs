@@ -185,7 +185,17 @@ pub async fn get_extensions(
 
     match ExtensionManager::get_all() {
         Ok(extensions) => Ok(Json(ExtensionResponse { extensions })),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+        Err(err) => {
+            // Return UNPROCESSABLE_ENTITY only for DeserializeError, INTERNAL_SERVER_ERROR for everything else
+            if err
+                .downcast_ref::<goose::config::base::ConfigError>()
+                .is_some_and(|e| matches!(e, goose::config::base::ConfigError::DeserializeError(_)))
+            {
+                Err(StatusCode::UNPROCESSABLE_ENTITY)
+            } else {
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        }
     }
 }
 
