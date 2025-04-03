@@ -4,6 +4,7 @@ import { join } from 'path';
 import { spawn, exec } from 'child_process';
 import { promisify } from 'util';
 
+const { runningQuotes } = require('./basic-mcp');
 const execAsync = promisify(exec);
 
 test.describe('Goose App', () => {
@@ -14,7 +15,7 @@ test.describe('Goose App', () => {
 
   test.beforeAll(async () => {
     console.log('Starting Electron app...');
-
+    
     // Start the electron-forge process
     appProcess = spawn('npm', ['run', 'start-gui'], {
       cwd: join(__dirname, '../..'),
@@ -182,6 +183,9 @@ test.describe('Goose App', () => {
 
     // Toggle back to original state
     await darkModeButton.click();
+
+    // Close menu with ESC key
+    await mainWindow.keyboard.press('Escape');
   });
 
   test('new session and directory operations', async () => {
@@ -341,11 +345,6 @@ test.describe('Goose App', () => {
       console.log('Clicking Add button...');
       await mainWindow.locator('button[type="submit"]').click();
 
-      // Wait a bit and dump HTML to see toast structure
-      await mainWindow.waitForTimeout(2000);
-      const html = await mainWindow.evaluate(() => document.documentElement.outerHTML);
-      console.log('HTML after submit:', html);
-
       // Wait for success toast and take screenshot
       await mainWindow.waitForSelector('.Toastify__toast-body div div:has-text("Successfully enabled extension")',
         { state: 'visible', timeout: 10000 });
@@ -362,5 +361,77 @@ test.describe('Goose App', () => {
       console.error('Error during form filling:', error);
       throw error;
     }
+  });
+
+  test('test running quotes functionality', async () => {
+    console.log('Testing running quotes functionality...');
+
+    // Find the chat input
+    const chatInput = await mainWindow.waitForSelector('textarea[placeholder*="What can goose help with?"]');
+    expect(await chatInput.isVisible()).toBe(true);
+
+    // Type a message requesting a running quote
+    await chatInput.fill('Can you give me an inspirational running quote using the runningQuote tool?');
+
+    // Take screenshot before sending
+    await mainWindow.screenshot({ path: 'test-results/before-quote-request.png' });
+
+    // Get initial message count
+    const initialMessages = await mainWindow.locator('.prose').count();
+
+    // Send message
+    await chatInput.press('Enter');
+
+    // Wait for loading indicator
+    const loadingIndicator = await mainWindow.waitForSelector('.text-textStandard >> text="goose is working on it…"',
+      { timeout: 10000 });
+    expect(await loadingIndicator.isVisible()).toBe(true);
+
+    // Take screenshot of loading state
+    await mainWindow.screenshot({ path: 'test-results/quote-loading.png' });
+
+    // Wait for loading indicator to disappear
+    await mainWindow.waitForSelector('.text-textStandard >> text="goose is working on it…"',
+      { state: 'hidden', timeout: 30000 });
+
+    // Wait for new message to appear
+    await mainWindow.waitForFunction((count) => {
+      const messages = document.querySelectorAll('.prose');
+      return messages.length > count;
+    }, initialMessages, { timeout: 30000 });
+
+    // Get the latest response
+    const response = await mainWindow.locator('.prose').last();
+    expect(await response.isVisible()).toBe(true);
+
+    // Click the Output dropdown to reveal the actual quote
+    const outputButton = await mainWindow.waitForSelector('button:has-text("Output")', { timeout: 5000 });
+    await outputButton.click();
+
+    // Wait a bit and dump HTML to see structure
+    await mainWindow.waitForTimeout(1000);
+    const html = await mainWindow.evaluate(() => document.documentElement.outerHTML);
+    console.log('Full page HTML after clicking Output:', html);
+
+    // Also dump just the response area HTML
+    const responseHtml = await response.evaluate(el => el.outerHTML);
+    console.log('Response area HTML:', responseHtml);
+
+    // Take screenshot before trying to find content
+    await mainWindow.screenshot({ path: 'test-results/quote-response-debug.png' });
+
+    // Now try to get the output content
+    const outputContent = await mainWindow.waitForSelector('.whitespace-pre-wrap', { timeout: 5000 });
+    const outputText = await outputContent.textContent();
+    console.log('Output text:', outputText);
+
+    // Take screenshot of expanded response
+    await mainWindow.screenshot({ path: 'test-results/quote-response.png' });
+
+    // Check if the output contains one of our known quotes
+    const containsKnownQuote = runningQuotes.some(({ quote, author }) => 
+      outputText.includes(`"${quote}" - ${author}`)
+    );
+    expect(containsKnownQuote).toBe(true);
   });
 });

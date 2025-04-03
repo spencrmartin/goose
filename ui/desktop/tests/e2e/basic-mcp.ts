@@ -1,10 +1,5 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-
-const server = new McpServer({
-    name: "Running Quotes",
-    version: "1.0.0"
-});
+const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
+const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio.js");
 
 // Collection of running-related inspirational quotes
 const runningQuotes = [
@@ -42,19 +37,35 @@ const runningQuotes = [
     }
 ];
 
-server.tool("runningQuote",
-  "Generates an inspirational running quote",
-  async () => {
-      const randomQuote = runningQuotes[Math.floor(Math.random() * runningQuotes.length)];
-      return {
-          content: [{
-              type: "text",
-              text: `"${randomQuote.quote}" - ${randomQuote.author}`
-          }]
-      };
-  }
-);
+async function startServer() {
+    const server = new McpServer({
+        name: "Running Quotes",
+        version: "1.0.0"
+    });
 
-// Start receiving messages on stdin and sending messages on stdout
-const transport = new StdioServerTransport();
-await server.connect(transport);
+    server.tool("runningQuote",
+      "Generates an inspirational running quote",
+      async () => {
+          const randomQuote = runningQuotes[Math.floor(Math.random() * runningQuotes.length)];
+          return {
+              content: [{
+                  type: "text",
+                  text: `"${randomQuote.quote}" - ${randomQuote.author}`
+              }]
+          };
+      }
+    );
+
+    // Start receiving messages on stdin and sending messages on stdout
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+}
+
+// Only start the server if this is the main module
+if (require.main === module) {
+    startServer().catch(console.error);
+}
+
+module.exports = {
+    runningQuotes
+};
