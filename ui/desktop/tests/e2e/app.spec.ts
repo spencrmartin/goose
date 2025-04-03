@@ -163,7 +163,7 @@ test.describe('Goose App', () => {
       },
       recordVideo: {
         dir: 'test-results/videos/',
-        size: { width: 1280, height: 720 }
+        size: { width: 620, height: 680 }
       }
     });
 
