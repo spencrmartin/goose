@@ -124,31 +124,39 @@ impl TruncateAgent {
         (request_id, output)
     }
 
-    async fn install_extension(
+    async fn enable_extension(
         capabilities: &mut Capabilities,
         extension_name: String,
         request_id: String,
     ) -> (String, Result<Vec<Content>, ToolError>) {
-        let config = match ExtensionManager::get_config(&extension_name) {
+        let config = match ExtensionManager::get_config_by_name(&extension_name) {
             Ok(Some(config)) => config,
-            Ok(None) => return (
-                request_id,
-                Err(ToolError::ExecutionError(
-                    format!("Extension '{}' not found. Please check the extension name and try again.", extension_name)
-                ))
-            ),
-            Err(e) => return (
-                request_id,
-                Err(ToolError::ExecutionError(
-                    format!("Failed to get extension config: {}", e)
-                ))
-            ),
+            Ok(None) => {
+                return (
+                    request_id,
+                    Err(ToolError::ExecutionError(format!(
+                        "Extension '{}' not found. Please check the extension name and try again.",
+                        extension_name
+                    ))),
+                )
+            }
+            Err(e) => {
+                return (
+                    request_id,
+                    Err(ToolError::ExecutionError(format!(
+                        "Failed to get extension config: {}",
+                        e
+                    ))),
+                )
+            }
         };
 
-        let result = capabilities.add_extension(config).await
+        let result = capabilities
+            .add_extension(config)
+            .await
             .map(|_| vec![Content::text("Extension installed successfully")])
             .map_err(|e| ToolError::ExecutionError(e.to_string()));
-        
+
         (request_id, result)
     }
 }
@@ -258,16 +266,12 @@ impl Agent for TruncateAgent {
             }),
         );
 
-        let discover_extensions_tool = Tool::new(
-            "platform__discover_extensions".to_string(),
-            "Discover additional capabilities to help complete tasks.
-            Lists extensions that are available but not currently active.
-            Use this tool when you're unable to find a specific feature or functionality, or when standard approaches aren't working.
+        let search_available_extensions = Tool::new(
+            "platform__search_available_extensions".to_string(),
+            "Searches for additional extensions available to help complete tasks.
+            Use this tool when you're unable to find a specific feature or functionality you need to complete your task, or when standard approaches aren't working.
             These extensions might provide the exact tools needed to solve your problem.
-            If you find a relevant one, suggest that the user enable the extension.
-            Also lists extensions curated by the Goose team that can be installed. To install them, direct the user to install them via the Goose Settings UI or the Goose CLI configure command with the command they will need to configure/add the extension. They cannot just enter the command directly into terminal to install.
-            They will have to go through the CLI or the Settings UI outside of the current Goose session.
-            You have a preference for suggesting the user enable any already-installed relevant extensions and otherwise installing the relevant extension.".to_string(),
+            If you find a relevant one, consider using your tools to enable it.".to_string(),
             json!({
                 "type": "object",
                 "required": [],
@@ -282,21 +286,21 @@ impl Agent for TruncateAgent {
             }),
         );
 
-        let install_extension_tool = Tool::new(
-            "platform__install_extension".to_string(),
-            "Install additional capabilities to help complete tasks.
-            Install an extension by providing the extension name.
+        let enable_extension_tool = Tool::new(
+            "platform__enable_extension".to_string(),
+            "Enable extensions to help complete tasks.
             Enable an extension by providing the extension name.
-            ".to_string(),
+            "
+            .to_string(),
             json!({
                 "type": "object",
                 "required": ["extension_name"],
                 "properties": {
-                    "extension_name": {"type": "string", "description": "The name of the extension to install"}
+                    "extension_name": {"type": "string", "description": "The name of the extension to enable"}
                 }
             }),
             Some(ToolAnnotations {
-                title: Some("Install extensions".to_string()),
+                title: Some("Enable extensions".to_string()),
                 read_only_hint: true,
                 destructive_hint: false,
                 idempotent_hint: false,
@@ -308,8 +312,8 @@ impl Agent for TruncateAgent {
             tools.push(read_resource_tool);
             tools.push(list_resources_tool);
         }
-        tools.push(discover_extensions_tool);
-        tools.push(install_extension_tool);
+        tools.push(search_available_extensions);
+        tools.push(enable_extension_tool);
 
         let config = capabilities.provider().get_model_config();
         let mut system_prompt = capabilities.get_system_prompt().await;
@@ -382,12 +386,12 @@ impl Agent for TruncateAgent {
                             break;
                         }
 
-                        // Split tool requests into install_extension and others
+                        // Split tool requests into enable_extension and others
                         let (install_requests, non_install_requests): (Vec<_>, Vec<_>) = tool_requests.clone()
                             .into_iter()
                             .partition(|req| {
                                 req.tool_call.as_ref()
-                                    .map(|call| call.name == "platform__install_extension")
+                                    .map(|call| call.name == "platform__enable_extension")
                                     .unwrap_or(false)
                             });
 
@@ -461,7 +465,7 @@ impl Agent for TruncateAgent {
                                                     .and_then(|v| v.as_str())
                                                     .unwrap_or("")
                                                     .to_string();
-                                                let install_result = Self::install_extension(&mut capabilities, extension_name, request.id.clone()).await;
+                                                let install_result = Self::enable_extension(&mut capabilities, extension_name, request.id.clone()).await;
                                                 install_results.push(install_result);
                                             }
                                             break;

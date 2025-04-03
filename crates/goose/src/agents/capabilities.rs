@@ -10,7 +10,7 @@ use std::time::Duration;
 use tokio::sync::Mutex;
 use tracing::{debug, instrument};
 
-use super::extension::{ExtensionConfig, ExtensionError, ExtensionInfo,ExtensionResult, ToolInfo};
+use super::extension::{ExtensionConfig, ExtensionError, ExtensionInfo, ExtensionResult, ToolInfo};
 use crate::config::{Config, ExtensionManager};
 use crate::prompt_template;
 use crate::providers::base::Provider;
@@ -543,8 +543,8 @@ impl Capabilities {
             self.read_resource(tool_call.arguments.clone()).await
         } else if tool_call.name == "platform__list_resources" {
             self.list_resources(tool_call.arguments.clone()).await
-        } else if tool_call.name == "platform__discover_extensions" {
-            self.discover_extensions().await
+        } else if tool_call.name == "platform__search_available_extensions" {
+            self.search_available_extensions().await
         } else {
             // Else, dispatch tool call based on the prefix naming convention
             let (client_name, client) = self
@@ -656,7 +656,7 @@ impl Capabilities {
             .map_err(|e| anyhow::anyhow!("Failed to get prompt: {}", e))
     }
 
-    pub async fn discover_extensions(&self) -> Result<Vec<Content>, ToolError> {
+    pub async fn search_available_extensions(&self) -> Result<Vec<Content>, ToolError> {
         let mut output_parts = vec![];
 
         // First get disabled extensions from current config
@@ -693,46 +693,13 @@ impl Capabilities {
 
         if !disabled_extensions.is_empty() {
             output_parts.push(format!(
-                "Currently installed extensions user can enable:\n{}\n",
+                "Currently available extensions user can enable:\n{}\n",
                 disabled_extensions.join("\n")
             ));
         } else {
             output_parts
-                .push("No installed extensions found in current configuration.\n".to_string());
+                .push("No available extensions found in current configuration.\n".to_string());
         }
-
-        // Read the servers.json file that's included at compile time
-        static SERVERS_JSON: &str = include_str!("../../../../documentation/static/servers.json");
-
-        if let Ok(servers) = serde_json::from_str::<Vec<serde_json::Value>>(SERVERS_JSON) {
-            let mut available_extensions: Vec<String> = vec![];
-            for server in servers {
-                let id = server["id"].as_str().unwrap_or("unknown");
-                let name = server["name"].as_str().unwrap_or("Unknown Name");
-                let description = server["description"].as_str().unwrap_or("No description");
-                let is_builtin = server["is_builtin"].as_bool().unwrap_or(false);
-                let command = server["command"].as_str().unwrap_or("");
-
-                // Only show non-builtin extensions that have an installation command
-                if !is_builtin && !command.is_empty() {
-                    available_extensions.push(format!(
-                        "- {} ({}) - {}\n  Install with: {}",
-                        name, id, description, command
-                    ));
-                }
-            }
-
-            if !available_extensions.is_empty() {
-                output_parts.push(format!(
-                    "\nAvailable extensions that user can install:\n{}\n",
-                    available_extensions.join("\n")
-                ));
-            }
-        }
-
-        // Add a note about installation
-        output_parts.push("\nRemind the user that to enable a disabled extension, they should use the Settings page in Goose or the CLI configure command to toggle the extension on.".to_string());
-        output_parts.push("Remind the user that to install a new extension, they should use the Settings page in Goose or the CLI configure command with the relevant run command.".to_string());
 
         Ok(vec![Content::text(output_parts.join("\n"))])
     }

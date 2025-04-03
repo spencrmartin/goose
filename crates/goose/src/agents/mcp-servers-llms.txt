@@ -1,0 +1,1134 @@
+
+Name: afterpay
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_afterpay/
+```yaml
+description: An MCP server that provides tools for interacting with the Afterpay API, enabling payment processing, order management, and configuration capabilities
+
+run_command: npx -y @block/mcp_afterpay@latest
+
+additional_installation_instructions: >
+  Must be connected to VPN before running.
+  Can be installed either through Goose Desktop Settings or Goose CLI configure command.
+
+env_var_sources: >
+  Credentials can be found in the Hack-week-mcp-2025 doc:
+  https://docs.google.com/document/d/1--Ih64UTNJxheEpAzJoHuTLDfDpQq206gqpN6WIP1i8/edit?tab=t.573opwubzq2r#heading=h.wkl5jui4z8co
+
+required_env_vars:
+  - AFTERPAY_SANDBOX_USERNAME
+  - AFTERPAY_SANDBOX_PASSWORD
+
+optional_env_vars: {}
+
+notes:
+  - All transactions are test transactions in us-qa environment
+  - Uses Afterpay us-qa environment by default
+  - VPN connection required for API access
+```
+---
+Name: afterpay_python
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_afterpay_python/
+```yaml
+description: An MCP server that provides integration with Afterpay's API for payment processing, checkout creation, refunds and order management
+
+run_command: mcp_afterpay_python
+
+additional_installation_instructions: >
+  1. Must be connected to VPN to access the API
+  2. Run 'uv sync' to initialize Python environment
+  3. Activate virtual environment with 'source .venv/bin/activate'
+  4. Get sandbox credentials from Afterpay MCP Hackweek doc
+
+env_var_sources: >
+  Get sandbox credentials from the Afterpay MCP Hackweek documentation:
+  https://docs.google.com/document/d/1--Ih64UTNJxheEpAzJoHuTLDfDpQq206gqpN6WIP1i8/edit?tab=t.573opwubzq2r
+
+required_env_vars:
+  - AFTERPAY_SANDBOX_USERNAME
+  - AFTERPAY_SANDBOX_PASSWORD
+
+optional_env_vars: {}
+
+notes: >
+  - Must be on VPN to access API
+  - All transactions are test transactions in us-qa environment
+  - Uses Afterpay us-qa environment by default
+  - Server runs on port 3000 by default
+```
+---
+Name: ap_payments_acquiring
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_ap_payments_acquiring/
+```yaml
+description: An MCP server that handles customer support queries for Afterpay Payments Acquiring Platform, including locating ARN for refund transactions
+
+run_command: mcp_ap_payments_acquiring
+
+additional_installation_instructions: >
+  1. Initialize Python environment: uv sync
+  2. Activate virtual environment: source .venv/bin/activate
+  3. For testing, can use: mcp dev src/mcp_ap_payments_acquiring/server.py
+     and access Inspector UI at http://localhost:5173
+
+env_var_sources: >
+  Slack token can be obtained from your Slack workspace admin
+
+required_env_vars: []
+
+optional_env_vars:
+  SLACK_TOKEN: Authentication token for enabling Slack functionality (format: xoxp-*)
+```
+
+I notice that while the README mentions a Slack token, it appears to be optional functionality rather than required for core operation. I've included it under optional_env_vars.
+
+The installation process appears to use `uv` as the package manager, and the MCP can be run directly using its name after installation. I've kept the additional installation instructions detailed but concise.
+
+Let me know if you'd like me to adjust any of these fields or if you need additional information!
+---
+Name: beacon_feature_assistant
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_beacon_feature_assistant/
+Here's the YAML representation based on the README content:
+
+```yaml
+description: An MCP server that provides natural language interface for searching and querying features from Square's Beacon feature store and Feature Explorer services
+run_command: uvx mcp_beacon_feature_assistant
+additional_installation_instructions: >
+  1. Initialize and activate Python environment:
+     uv sync
+     source .venv/bin/activate
+
+  2. For development testing, you can use:
+     mcp dev src/mcp_beacon_feature_assistant/server.py
+
+  3. Access MCP Inspector at http://localhost:5173
+
+env_var_sources: >
+  The README doesn't specify environment variable sources. You may need to check
+  with the Square internal documentation or team for required credentials.
+
+required_env_vars: []  # No explicitly mentioned required env vars in the README
+
+optional_env_vars: {}  # No explicitly mentioned optional env vars in the README
+
+notes: >
+  - The MCP runs on port 3000 by default
+  - Can be integrated with both Goose CLI and Goose Desktop
+  - Supports three main operations:
+    * search_features
+    * query_features
+    * get_data_owner (Work in Progress)
+```
+
+Note: Since the README doesn't explicitly mention any environment variables, I've left those arrays empty. You may want to check the actual source code or configuration files to determine if there are any required or optional environment variables.
+---
+Name: blockforge
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_blockforge/
+```yaml
+description: A Python-based MCP server for BlockForge that integrates with Goose via the Model Context Protocol
+run_command: mcp_blockforge
+additional_installation_instructions: >
+  1. Initialize Python environment: uv sync
+  2. Activate virtual environment: source .venv/bin/activate
+  3. For development/testing, can use: mcp dev src/mcp_blockforge/server.py
+env_var_sources: No environment variables specified in README
+required_env_vars: []
+optional_env_vars: {}
+```
+
+Note: Based on the provided README content, there don't appear to be any explicitly required or optional environment variables mentioned. The README focuses on installation and setup instructions using `uv` for Python environment management. If there are any environment variables needed, they would likely be defined in other configuration files that weren't provided in the input.
+
+The main integration steps involve:
+1. Setting up the Python environment using `uv`
+2. Running the MCP server
+3. Integrating with Goose through its Extensions system using StandardIO type
+
+If you need the complete environment variable requirements, you may want to check:
+- Any .env.example files
+- The source code in src/mcp_blockforge/
+- Documentation in the python-sdk repository referenced
+---
+Name: bugsnag
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_bugsnag/
+```yaml
+description: A Model Context Protocol (MCP) server that provides integration with Bugsnag's API for analyzing error data and customer impact
+
+run_command: uv run mcp_bugsnag
+
+additional_installation_instructions: >
+  1. Run 'uv sync' to initialize Python environment
+  2. Activate virtual environment with 'source .venv/bin/activate'
+  3. Get your Bugsnag auth token from https://app.bugsnag.com/settings/square-inc/my-account/auth-tokens
+  4. Get your Bugsnag project ID from https://app.bugsnag.com/settings/square-inc/projects
+
+env_var_sources:
+  - Bugsnag Auth Tokens page: https://app.bugsnag.com/settings/square-inc/my-account/auth-tokens
+  - Bugsnag Projects page: https://app.bugsnag.com/settings/square-inc/projects
+
+required_env_vars:
+  - BUGSNAG_AUTH_TOKEN
+  - BUGSNAG_PROJECT_ID
+
+optional_env_vars:
+  LOG_LEVEL: Controls log level for per-tool logfiles (defaults to INFO)
+```
+---
+Name: cash_customer_search
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_cash_customer_search/
+Based on the README content, I'll generate the requested YAML:
+
+```yaml
+description: An MCP that enables searching for CashApp customer tokens using customer information like names, location, and age through Snowflake PII tables
+run_command: uv run mcp_cash_customer_search
+additional_installation_instructions: >
+  1. Run 'uv sync' to initialize Python environment
+  2. Activate virtual environment with 'source .venv/bin/activate'
+  3. Ensure you have access to required Snowflake PII tables:
+     - APP_CASH.APP.CUSTOMER_SUMMARY
+     - APP_CASH_PII.APP.IDENTITY_SOURCED_CUSTOMER_NAMES
+     - APP_CASH_PII.APP.CUSTOMER_ADDRESS_DATA_EVENTS_RAW_GREEN_PARSED
+  4. If using authorized views, join the read-only group for app-cash-pii database and create Snowflake authorized views
+required_env_vars: []  # No strictly required env vars mentioned in README
+optional_env_vars:
+  LOG_LEVEL: Set logging level (debug or info, defaults to info)
+  USE_AUTHORIZED_VIEWS: Enable use of Snowflake authorized views instead of direct table access (true/false, defaults to false)
+env_var_sources: >
+  Environment variables can be set when running the command or through the Goose extension installation modal.
+  For authorized views access, join the read-only group at registry.sqprod.co/groups/app-cash-pii--snowflake__read_only
+```
+---
+Name: codesearch
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_codesearch/
+```yaml
+description: An MCP server that provides code search functionality by porting the code search toolkit from goose-plugins-block
+
+run_command: uvx mcp-codesearch
+
+additional_installation_instructions: >
+  1. Make sure you have deactivated hermit if using it: deactivate-hermit
+  2. Create and activate a Python virtual environment: source .venv/bin/activate
+  3. Install the package: uv pip install .
+
+env_var_sources: Not specified in README
+
+required_env_vars: []  # No required env vars mentioned in README
+
+optional_env_vars: {}  # No optional env vars mentioned in README
+
+notes: >
+  - Can be tested using: mcp dev server.py
+  - Alternative test command: npx @modelcontextprotocol/inspector uv run mcp-codesearch
+  - To add as Goose extension: Go to Settings > Extensions > Add and fill out the form
+```
+---
+Name: contentful
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_contentful/
+```yaml
+description: An MCP server that integrates with Contentful's Content Management API to allow querying and updating content in Contentful spaces
+
+run_command: uvx mcp_contentful
+
+additional_installation_instructions: >
+  1. Run `uv sync` to initialize Python environment
+  2. Source virtual environment with `source .venv/bin/activate`
+  3. For development/testing, use `mcp dev src/mcp_contentful/server.py`
+
+env_var_sources: >
+  Get Contentful Management Token:
+  1. Go to Contentful (go/contentful)
+  2. Click gear icon > CMA tokens
+  3. Create personal access token
+  4. Name it "<your-ldap>-goose" and set expiration
+  5. Copy and securely store the token
+
+required_env_vars:
+  - CONTENTFUL_MANAGEMENT_TOKEN
+
+optional_env_vars:
+  CONTENTFUL_SPACE_ID: Your Contentful space ID for default operations
+
+```
+
+Note: I've generated this YAML based on the README content provided. The README indicates this is a Python-based MCP that integrates with Contentful, requiring a management token for authentication and optionally accepting a space ID. The installation and running instructions are derived from the Development and Usage sections of the README.
+---
+Name: data_discovery
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_data_discovery/
+```yaml
+description: An MCP server that provides access to data asset information, metadata, ownership and lineage stored in Acryl Datahub
+
+run_command: uvx mcp_data_discovery
+
+additional_installation_instructions: >
+  1. Sign into Okta
+  2. Connect to VPN via Cloudflare WARP
+  3. Get 'View' access to Acryl Datahub
+  4. Generate an Acryl API Token from block.acryl.io/settings/tokens
+  5. Ensure native-tls=true and correct index-url are set in ~/.config/uv/uv.toml
+
+required_env_vars:
+  - ACRYL_API_TOKEN
+
+optional_env_vars: {}
+
+env_var_sources:
+  ACRYL_API_TOKEN: https://block.acryl.io/settings/tokens
+```
+
+I've generated this YAML based on the README content provided. A few notes on my choices:
+
+1. The description is derived from the TL;DR section and main purpose stated in the README
+2. The run command is `uvx mcp_data_discovery` based on the installation instructions showing it's a Python-based MCP
+3. Additional installation instructions capture all the pre-requisites and setup steps
+4. Only one required env var (ACRYL_API_TOKEN) is mentioned in the README
+5. No optional env vars are mentioned in the README
+6. The env var source links directly to where users can generate their token
+
+Let me know if you'd like me to adjust any of these fields or if you need clarification on any part.
+---
+Name: datadog
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_datadog/
+```yaml
+description: An MCP server that provides Datadog monitoring and metrics integration capabilities through the Model Context Protocol
+
+run_command: mcp_datadog
+
+additional_installation_instructions: >
+  1. Initialize Python environment: uv sync
+  2. Activate virtual environment: source .venv/bin/activate
+  3. Ensure port 3000 is available for the server
+
+env_var_sources: >
+  Environment variables should be configured based on your Datadog account settings.
+  Obtain API credentials from your Datadog dashboard.
+
+required_env_vars:
+  - DD_API_KEY
+  - DD_APP_KEY
+  - DD_SITE  # e.g., 'datadoghq.com' or 'datadoghq.eu'
+
+optional_env_vars:
+  DD_ENV: Datadog environment tag
+  DD_SERVICE: Service name for metrics
+  DD_VERSION: Version tag for metrics
+  DD_TAGS: Additional tags for metrics
+  MCP_PORT: Custom port for MCP server (default: 3000)
+  DD_LOG_LEVEL: Logging level (default: INFO)
+```
+
+I've generated this based on the README and common Datadog integration patterns, since no specific package files were provided. The environment variables are inferred from standard Datadog Python client requirements. Please note that actual required/optional environment variables may vary depending on the specific implementation details not shown in the README.
+---
+Name: dovetail
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_dovetail/
+Based on the README content, here's the YAML representation:
+
+```yaml
+description: An MCP server implementation using the TypeScript SDK for integrating custom tools with Goose via the Model Context Protocol
+run_command: node ./dist/index.js
+additional_installation_instructions: >
+  1. Run 'npm install' to setup the environment
+  2. Run 'npm run build' to build the server
+env_var_sources: No specific environment variables mentioned in the README
+required_env_vars: []
+optional_env_vars: {}
+```
+
+Note: Since there's no package.json, requirements.txt, or pyproject.toml files available in the provided content, and the README doesn't mention any environment variables, I've left those fields empty. If you'd like me to analyze additional files or provide more specific information about environment variables, please share those files or details.
+
+The README primarily focuses on:
+1. Setting up and running the MCP server
+2. Testing with MCP Inspector
+3. Integrating with Goose through its extension system
+
+If there are additional configuration requirements or environment variables needed, they should be documented in the project's configuration files or additional documentation.
+---
+Name: dsl_engine
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_dsl_engine/
+Based on the provided README, I'll generate the YAML configuration:
+
+```yaml
+description: A DSL (Domain-Specific Language) engine MCP server that integrates with the Model Context Protocol
+run_command: mcp_dsl_engine
+additional_installation_instructions: >
+  1. Initialize and activate Python environment:
+     uv sync
+     source .venv/bin/activate
+  2. Ensure the server is running on port 3000
+env_var_sources: No specific environment variables mentioned in the README
+required_env_vars: []  # No required env vars specified in README
+optional_env_vars: {}  # No optional env vars specified in README
+
+notes: >
+  - For development/testing, can use 'mcp dev src/mcp_dsl_engine/server.py' to run with Inspector UI
+  - Inspector UI will be available at http://localhost:5173
+  - When integrating with Goose, use absolute path to the project's CLI in StandardIO extension configuration
+```
+
+Note: Since there's no package.json, requirements.txt, or pyproject.toml files provided in the context, I've based this solely on the README content. The environment variables sections are empty as none were specified in the documentation. If you have access to those additional files, please share them for a more complete configuration.
+---
+Name: duckdb
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_duckdb/
+```yaml
+description: An MCP server for DuckDB integration that provides database operations through the Model Context Protocol
+run_command: mcp_duckdb
+additional_installation_instructions: >
+  1. Initialize Python environment: uv sync
+  2. Activate virtual environment: source .venv/bin/activate
+  3. Ensure DuckDB is installed and accessible
+env_var_sources: No specific environment variables mentioned in the README
+required_env_vars: []
+optional_env_vars: {}
+```
+
+I've generated this YAML based on the provided README content. A few notes:
+
+1. The README doesn't specify any required or optional environment variables, so those fields are empty.
+
+2. The installation instructions are taken directly from the "Getting Started" section.
+
+3. The run command is `mcp_duckdb` as specified in the README, though it's worth noting there are two ways to run it:
+   - Direct server mode: `mcp_duckdb`
+   - Development mode with Inspector: `mcp dev src/mcp_duckdb/server.py`
+
+4. Without access to additional configuration files (package.json, requirements.txt, or pyproject.toml), I can't determine if there are any additional environment variables or dependencies that might be required.
+
+If you have access to any additional configuration files, I can provide a more complete YAML output including any environment variables or additional dependencies specified in those files.
+---
+Name: elasticgraph
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_elasticgraph/
+Based on the README content, I'll generate the requested YAML format:
+
+```yaml
+description: An MCP server that provides access to ElasticGraph functionality for indexing, searching, and aggregating data using GraphQL and Elasticsearch/OpenSearch
+run_command: uvx mcp_elasticgraph
+additional_installation_instructions: >
+  1. Ensure you are on WARP VPN
+  2. Configure UV registry:
+     Add to ~/.config/uv/uv.toml:
+     native-tls = true
+     index-url = "https://artifactory.global.square/artifactory/api/pypi/block-pypi/simple"
+  3. Run `make install` to install dependencies
+  4. Source virtual environment: `source .venv/bin/activate`
+env_var_sources: >
+  No explicit environment variables mentioned in the README
+required_env_vars: []  # No required env vars explicitly mentioned
+optional_env_vars: {}  # No optional env vars explicitly mentioned
+
+# Note: The actual environment variables may exist but are not documented in the README.
+# The project appears to be an internal Block tool that may require additional setup
+# and configuration not fully detailed in the public documentation.
+```
+
+I've left the environment variables sections empty since they're not explicitly mentioned in the README. You may want to check the actual source code or configuration files to determine if there are any required or optional environment variables.
+
+The additional installation instructions include the key setup steps mentioned in the README, particularly the UV registry configuration which appears to be crucial for accessing the internal artifacts.
+---
+Name: featureplatform
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_featureplatform/
+```yaml
+description: An MCP server for feature platform integration, built using the python-sdk for Model Context Protocol
+
+run_command: mcp_featureplatform
+
+additional_installation_instructions: >
+  1. Initialize and activate Python environment:
+     uv sync
+     source .venv/bin/activate
+  2. The server will run on port 3000 by default
+
+env_var_sources: Not specified in README
+
+required_env_vars: []  # No required env vars mentioned in README
+
+optional_env_vars: {}  # No optional env vars mentioned in README
+
+notes: >
+  - Can be tested using MCP Inspector by running: mcp dev src/mcp_featureplatform/server.py
+  - Access Inspector UI at http://localhost:5173
+  - For Goose integration, add as StandardIO extension with absolute path to CLI
+```
+---
+Name: figma
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_figma/
+Based on the README content, I'll generate the YAML configuration:
+
+```yaml
+description: An MCP server that provides Figma integration capabilities using the ModelContextProtocol typescript SDK
+run_command: node ./dist/index.js
+additional_installation_instructions: >
+  1. Run 'npm install' to setup the environment
+  2. Run 'npm run build' to build the server
+  3. For testing, you can use 'npx @modelcontextprotocol/inspector node dist/index.js'
+     and access http://localhost:5173 for the MCP Inspector UI
+env_var_sources: Not specified in README
+required_env_vars: []  # No required env vars mentioned in README
+optional_env_vars: {}  # No optional env vars mentioned in README
+integration_instructions: >
+  In Goose:
+  1. Go to Settings > Extensions > Add
+  2. Set Type to StandardIO
+  3. Enter the absolute path to the project's CLI, e.g.:
+     node /full/path/to/dist/index.js
+```
+
+Note: Since the README doesn't specify any environment variables or their sources, those fields are empty/null. If there are any package.json or other configuration files available, I could provide more detailed information about required and optional environment variables.
+---
+Name: filesearch
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_filesearch/
+```yaml
+description: An MCP server that provides file search capabilities through the Model Context Protocol
+run_command: uv run mcp_filesearch
+additional_installation_instructions: >
+  1. Initialize Python environment: uv sync
+  2. Activate virtual environment: source .venv/bin/activate
+  3. The server will run on port 3000 by default
+env_var_sources: No specific environment variables mentioned in README
+required_env_vars: []  # No required env vars specified in README
+optional_env_vars: {}  # No optional env vars specified in README
+
+notes: >
+  - Can be tested using MCP Inspector by running: mcp dev src/mcp_filesearch/server.py
+  - For Goose integration, add as StandardIO extension with absolute path to CLI
+  - Server runs on port 3000 by default with no logging output
+```
+---
+Name: formblocker
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_formblocker/
+```yaml
+description: An MCP server that provides form blocking capabilities through the Model Context Protocol
+run_command: mcp_formblocker
+additional_installation_instructions: >
+  1. Initialize Python environment: uv sync
+  2. Activate virtual environment: source .venv/bin/activate
+env_var_sources: No specific environment variables mentioned in README
+required_env_vars: []
+optional_env_vars: {}
+```
+
+I've created a minimal YAML representation based on the README content. A few notes:
+
+1. The description is somewhat generic since the specific functionality of the form blocker isn't detailed in the README
+2. The README shows two ways to run the server:
+   - Direct: `mcp_formblocker`
+   - Development mode with Inspector: `mcp dev src/mcp_formblocker/server.py`
+   I've listed the direct command as the primary run command
+3. No environment variables are explicitly mentioned in the README, so those fields are empty
+4. The additional installation instructions include the environment setup steps from the README
+
+If you have access to any additional configuration files like `requirements.txt`, `pyproject.toml`, or environment configuration files, I could provide more detailed information about required/optional environment variables and dependencies.
+---
+Name: gcal
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_gcal/
+```yaml
+description: A Google Calendar integration MCP that enables reading and managing calendar events through Goose
+
+run_command: uvx mcp_gcal
+
+additional_installation_instructions: >
+  1. Run `uv sync` to install dependencies
+  2. Activate virtual environment with `source .venv/bin/activate`
+  3. Configure Google Calendar API access and credentials (specific instructions missing from README)
+
+env_var_sources: >
+  Environment variables likely need to be configured for Google Calendar API authentication,
+  but specific sources are not documented in the README
+
+required_env_vars:
+  # Inferring these are needed for Google Calendar API auth, though not explicitly stated
+  - GOOGLE_APPLICATION_CREDENTIALS
+  - GOOGLE_CALENDAR_API_KEY
+
+optional_env_vars:
+  # No optional env vars explicitly mentioned in README
+  DEBUG: Enable debug logging
+  CALENDAR_ID: Default calendar ID to use if not specified
+
+notes: >
+  The README is missing critical setup information about:
+  - How to obtain and configure Google Calendar API credentials
+  - Required environment variables and their sources
+  - Security considerations and permissions
+  These should be added to make the MCP more usable
+```
+---
+Name: glean
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_glean/
+```yaml
+description: An MCP server that integrates with Glean's search and knowledge management API to enable document and content search capabilities
+
+run_command: mcp_glean
+
+additional_installation_instructions: >
+  1. Run 'uv sync' to initialize Python environment
+  2. Activate virtual environment with 'source .venv/bin/activate'
+  3. For development/testing, can use 'mcp dev src/mcp_glean/server.py'
+     to start server with Inspector UI
+
+env_var_sources: >
+  For GLEAN_CLIENT_ID: Ask in #exe Slack channel
+  For GLEAN_TOKEN: Generate at https://app.glean.com/admin/platform/tokenManagement (requires admin access)
+
+required_env_vars:
+  - GLEAN_CLIENT_ID # For Okta OAuth authentication
+  - GLEAN_TOKEN # For API token authentication (alternative to CLIENT_ID)
+
+optional_env_vars: {} # No optional environment variables specified in README
+
+notes: >
+  Only one of GLEAN_CLIENT_ID or GLEAN_TOKEN is required - they are alternative
+  authentication methods. GLEAN_CLIENT_ID uses Okta OAuth flow while GLEAN_TOKEN
+  uses direct API token authentication.
+```
+---
+Name: goose_tuner
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_goose_tuner/
+Based on the README content, here's the YAML formatted information:
+
+```yaml
+description: An MCP server that analyzes Snowflake queries and provides optimization recommendations through explain plan analysis
+run_command: uvx mcp_goose_tuner
+additional_installation_instructions: >
+  1. Ensure Python 3.10 or higher is installed
+  2. Install uv package manager
+  3. Configure access to Block's artifactory
+  4. Install Goose IDE for integration (optional)
+required_env_vars:
+  - SNOWFLAKE_USER
+optional_env_vars:
+  SNOWFLAKE_ROLE: Specify custom Snowflake role
+  SNOWFLAKE_DATABASE: Specify target Snowflake database
+  SNOWFLAKE_SCHEMA: Specify target Snowflake schema
+env_var_sources: >
+  Environment variables should be configured through your Snowflake account settings
+  and exported in your local environment or configured through your deployment platform.
+```
+
+Note: While I've generated this based on the available README content, you may want to verify if there are any additional environment variables or installation requirements in the project's package configuration files (which weren't provided in the input).
+---
+Name: incidentio
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_incidentio/
+Based on the provided README content, here's the formatted YAML response:
+
+```yaml
+description: A Model Context Protocol (MCP) server that enables interaction with Incident.io's API, specifically for listing incidents
+run_command: node ./dist
+additional_installation_instructions: >
+  1. Run 'npm install' to install dependencies
+  2. Run 'npm run build' to build the project before running
+env_var_sources: >
+  Obtain your API key from your Incident.io account settings
+required_env_vars:
+  - INCIDENTIO_API_KEY
+optional_env_vars: {}  # No optional environment variables mentioned in the README
+```
+
+Note: Since this appears to be a Node.js project, I've included the build step in the additional installation instructions since it's required before running the server. The README doesn't mention any optional environment variables, so I've left that as an empty object.
+---
+Name: jira
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_jira/
+Based on the README content, I'll generate the YAML configuration:
+
+```yaml
+description: A Model Context Protocol server that enables natural language interaction with Jira for issue tracking, project management, and sprint planning
+run_command: npx -y @block/mcp_jira@latest
+additional_installation_instructions: >
+  1. Login to Jira at http://go/jira
+  2. Generate a Jira API token at https://id.atlassian.com/manage-profile/security/api-tokens
+  3. Install dependencies using 'npm install' if running locally
+  4. For local development, build using 'npm run build'
+required_env_vars:
+  - JIRA_EMAIL
+  - JIRA_API_TOKEN
+optional_env_vars:
+  JIRA_HOST: Override default Jira instance (default is block.atlassian.net)
+env_var_sources: >
+  - JIRA_EMAIL: Your @squareup email address
+  - JIRA_API_TOKEN: Generated from Atlassian account security settings
+  - JIRA_HOST: Custom Jira instance URL if not using block.atlassian.net
+```
+
+Note: I notice you don't have any extensions loaded. To make full use of this MCP, you'll need to add it as an extension in your Goose environment following the instructions in the README.
+---
+Name: launchdarkly
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_launchdarkly/
+Based on the README content, I'll generate the YAML configuration:
+
+```yaml
+description: An MCP server that provides CRUD operations for LaunchDarkly feature flags through Goose
+run_command: mcp dev src/mcp_launchdarkly/server.py
+additional_installation_instructions: >
+  1. Install uv if not already installed:
+     curl -LsSf https://astral.sh/uv/install.sh | sh
+  2. Run: uv sync
+  3. Activate virtual environment: source .venv/bin/activate
+  4. Install package: cd mcp_launchdarkly && uv pip install -e .
+env_var_sources: >
+  Create a personal access token from LaunchDarkly Authorization admin page:
+  https://app.launchdarkly.com/settings/authorization
+  (Important: Keep "This is a service token" option unchecked)
+required_env_vars:
+  - LD_API_KEY
+optional_env_vars: {}
+```
+
+Note: The README doesn't specify any optional environment variables, so I've left that as an empty object. If there are any additional configuration files in the repository that weren't included in the prompt, there might be more environment variables that could be added to either the required or optional sections.
+---
+Name: linear
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_linear/
+```yaml
+description: An MCP server that integrates with Linear issue tracking system, allowing AI agents to interact with Linear projects and tasks
+run_command: mcp_linear
+additional_installation_instructions: >
+  1. Initialize Python environment: uv sync
+  2. Activate virtual environment: source .venv/bin/activate
+  3. For development/testing, can use: mcp dev src/mcp_linear/server.py
+env_var_sources: Linear API configuration page at https://linear.app/settings/api
+required_env_vars:
+  - LINEAR_API_KEY
+optional_env_vars:
+  DEBUG: Enable debug logging for the MCP server
+  PORT: Custom port number (defaults to 3000)
+  HOST: Custom host address
+```
+
+I've generated this YAML based on the README content and common MCP patterns, making some reasonable assumptions since not all details were explicitly provided. The description focuses on Linear integration since this is called "mcp_linear". I included the LINEAR_API_KEY as a required environment variable since Linear API access would need authentication. The optional environment variables are common ones for MCP servers, though they weren't explicitly mentioned in the README.
+
+Let me know if you need any clarification or adjustments to this configuration.
+---
+Name: looker
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_looker/
+```yaml
+description: An MCP server that provides integration with Looker for data analytics and visualization capabilities
+run_command: uv run mcp_looker
+additional_installation_instructions: >
+  1. Initialize Python environment: uv sync
+  2. Activate virtual environment: source .venv/bin/activate
+  3. For local development, can use: mcp dev src/mcp_looker/server.py
+env_var_sources: >
+  Environment variables should be configured based on your Looker instance settings.
+  Contact your Looker admin for the required credentials and API endpoints.
+required_env_vars:
+  - LOOKER_BASE_URL
+  - LOOKER_CLIENT_ID
+  - LOOKER_CLIENT_SECRET
+optional_env_vars:
+  DEBUG: Enable debug logging
+  MCP_PORT: Custom port for the MCP server (default: 5000)
+  MCP_HOST: Custom host for the MCP server (default: localhost)
+```
+
+Note: I've made some assumptions about the required environment variables based on typical Looker API integration needs, since they weren't explicitly specified in the README. You may want to verify these with the actual implementation requirements.
+
+I notice this is an MCP (Model Context Protocol) implementation, so I should also mention that you'll need to have the MCP Inspector running to test the integration locally. The README indicates it will be available at http://localhost:5173.
+---
+Name: pagerduty
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_pagerduty/
+```yaml
+description: An MCP server that enables creating incidents and listing services in PagerDuty via API integration
+run_command: npm run build && npm start
+additional_installation_instructions: >
+  1. Navigate to the mcp-pagerduty directory
+  2. Run 'npm install' to install dependencies
+  3. Get your PagerDuty API key from https://pagerduty.com/
+required_env_vars:
+  - PAGERDUTY_API_KEY
+optional_env_vars: {}  # No optional environment variables specified in README
+env_var_sources: >
+  Get your PagerDuty API key from your PagerDuty account settings at https://pagerduty.com/
+```
+
+I've generated this YAML based on the provided README content, focusing on:
+
+1. The core functionality described (PagerDuty incident creation and service listing)
+2. The explicit environment variable requirement (PAGERDUTY_API_KEY)
+3. The installation and run commands specified in the Development section
+4. The fact that no optional environment variables were mentioned in the README
+
+Note that this is a Node.js project based on the npm commands shown in the README, so I've included the appropriate build and start commands in the run_command field.
+---
+Name: panther
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_panther/
+Based on the provided README, I'll generate the YAML configuration:
+
+```yaml
+description: An MCP server that provides integration with Panther security platform, offering tools for alert management, data lake operations, rule management, and AI analysis
+run_command: uvx mcp_panther
+additional_installation_instructions: >
+  1. Run `make install` to initialize Python environment
+  2. Activate virtual environment with `source .venv/bin/activate`
+  3. For development, you can also use `make dev` for linting and formatting
+env_var_sources: >
+  Panther API tokens can be created at https://panther-production.block.xyz/settings/api/tokens/
+required_env_vars:
+  - PANTHER_API_KEY
+optional_env_vars: {}
+api_permissions: >
+  The Panther API token must have these permissions:
+  - Read Alerts
+  - View Rules
+  - View Policies
+  - Query Data Lake
+  - View Log Sources
+  - Read User Info
+```
+
+Note: The README doesn't explicitly mention any optional environment variables, so I've left that section empty. The API permissions are included as additional information since they're critical for the MCP's functionality.
+---
+Name: presidio
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_presidio/
+```yaml
+description: An MCP server that provides access to Square's presidio log tool through the `sq presidio` command for querying and aggregating logs across environments
+
+run_command: uv run mcp_presidio
+
+additional_installation_instructions: >
+  1. Install and configure Square CLI (`sq`)
+  2. Connect to Square VPN
+  3. Run `uv sync` to set up Python environment
+  4. Activate virtual environment with `source .venv/bin/activate`
+  5. Run `sq auth login` to authenticate
+
+required_env_vars:
+  - PATH # For accessing sq CLI
+
+optional_env_vars:
+  DEBUG: Enable debug logging
+  PRESIDIO_DEFAULT_ENV: Set default environment (production/staging/sandbox)
+  PRESIDIO_DEFAULT_SIZE: Set default result size limit
+  PRESIDIO_DEFAULT_FORMAT: Set default output format fields
+
+env_var_sources: >
+  No explicit environment variables required beyond having Square CLI (`sq`)
+  properly configured and in PATH. Authentication is handled through `sq auth login`.
+```
+---
+Name: qai_index_search
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_qai_index_search/
+```yaml
+description: An MCP server that provides search functionality for QAI (Question-Answer Index) data using the Python MCP SDK
+run_command: uvx mcp_qai_index_search@latest
+additional_installation_instructions: >
+  1. Initialize Python environment: uv sync
+  2. Activate virtual environment: source .venv/bin/activate
+  3. For local development, use: mcp dev src/mcp_qai_index_search/server.py
+required_env_vars: []
+optional_env_vars: {}
+env_var_sources: No environment variables specified in the README
+```
+
+Note: Based on the README content provided, there don't appear to be any explicitly required or optional environment variables. The installation and setup process seems to focus on Python environment setup using `uv` and virtual environment activation. The MCP can be run either using `uvx` for production or `mcp dev` for local development with the inspector UI.
+
+If there are any environment variables required for configuration, they would likely be documented in other files not shown here (like a config.py or .env.example file). You may want to check those files if they exist to ensure complete environment variable documentation.
+---
+Name: sentry
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_sentry/
+Based on the README content, I'll generate the YAML configuration:
+
+```yaml
+description: An MCP server that integrates with Sentry to fetch, view, and manage issue tracking data
+run_command: mcp dev src/mcp_sentry/server.py
+additional_installation_instructions: >
+  1. Clone the repository
+  2. Run 'uv sync'
+  3. Activate virtual environment with 'source .venv/bin/activate'
+  4. Ensure Python 3.13 or higher is installed
+env_var_sources: >
+  SENTRY_AUTH_TOKEN: Sentry.io > User Profile > User Auth Tokens > Create New Token
+  (require scopes: project:read, event:read and write)
+
+  SENTRY_ORG: Organization Settings > Organization ID
+required_env_vars:
+  - SENTRY_AUTH_TOKEN
+  - SENTRY_ORG
+optional_env_vars: {}  # No optional environment variables mentioned in the README
+```
+
+Note: The README doesn't mention any optional environment variables, so I've left that section empty. The environment variable sources are clearly documented in the README, and I've included them in the `env_var_sources` field. The installation instructions are straightforward and include the necessary Python version requirement.
+---
+Name: signallib
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_signallib/
+Based on the README content, I'll generate the requested YAML:
+
+```yaml
+description: A code generation assistant MCP that helps maintain consistency when adding new signals to a signal-lib codebase
+run_command: mcp_signallib
+additional_installation_instructions: >
+  1. Run `uv sync` and activate virtual environment with `source .venv/bin/activate`
+  2. Install Git and GitHub CLI:
+     ```bash
+     brew install gh
+     brew install git
+     ```
+  3. Authenticate with GitHub:
+     ```bash
+     gh auth login
+     ```
+  4. Clone required repository:
+     ```bash
+     git clone org-49461806@github.com:squareup/java.git
+     ```
+required_env_vars:
+  - GITHUB_TOKEN  # Implied by GitHub authentication requirement
+optional_env_vars:
+  DEBUG: Enable debug logging
+  PORT: Custom port number (defaults to 3000)
+env_var_sources: >
+  GitHub token is obtained automatically when running `gh auth login`.
+  No explicit environment variable configuration appears to be required based on the README.
+```
+
+Note: The README doesn't explicitly specify required environment variables, but since GitHub authentication is required, I've included GITHUB_TOKEN as an implied requirement. The optional environment variables are inferred from common practices and the mention of the server running on port 3000. You may want to verify these requirements with the actual implementation.
+---
+Name: slack
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_slack/
+Based on the README content, I'll generate the requested YAML:
+
+```yaml
+description: A Slack integration MCP that provides comprehensive read and write capabilities for Slack workspace operations including messages, channels, users, and DND settings
+run_command: uvx mcp_slack
+additional_installation_instructions: >
+  1. Create a Slack App at https://api.slack.com/apps
+  2. Add all required OAuth scopes listed in README
+  3. Install app to workspace
+  4. Copy OAuth User Token (xoxp-)
+  5. Run 'uv sync' to set up Python environment
+required_env_vars:
+  - SLACK_TOKEN
+  - SLACK_DEFAULT_WORKSPACE_ID
+optional_env_vars: {}  # No optional environment variables mentioned in README
+env_var_sources: >
+  - SLACK_TOKEN: OAuth User Token from Slack App settings (starts with xoxp-)
+  - SLACK_DEFAULT_WORKSPACE_ID: Your Slack workspace ID (starts with T)
+```
+
+Note: The README doesn't explicitly mention any optional environment variables, so I've left that section empty. All the configuration appears to be handled through the two required environment variables.
+
+The installation instructions have been condensed but maintain all critical steps for getting the MCP running. The description aims to capture the broad functionality of the Slack integration while staying concise.
+---
+Name: sliderule
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_sliderule/
+```yaml
+description: An MCP server that provides sliderule functionality through the Model Context Protocol (MCP)
+run_command: mcp_sliderule
+additional_installation_instructions: >
+  1. Initialize Python environment: uv sync
+  2. Activate virtual environment: source .venv/bin/activate
+env_var_sources: No specific environment variables mentioned in README
+required_env_vars: []
+optional_env_vars: {}
+```
+
+I've generated this YAML based on the README content provided. A few notes:
+
+1. The README doesn't specify any required or optional environment variables, so those fields are empty arrays/objects
+2. The installation instructions are taken directly from the "Getting Started" section
+3. The run command is `mcp_sliderule` as specified in the README, though it can also be run through `mcp dev src/mcp_sliderule/server.py` for testing with the Inspector
+4. The description is generalized since the specific functionality of the sliderule MCP is not detailed in the README
+
+To get more accurate information about environment variables and additional configuration requirements, it would be helpful to see:
+
+1. The actual source code
+2. Any configuration files (like .env.example)
+3. The pyproject.toml or requirements.txt file
+---
+Name: snowflake
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_snowflake/
+Based on the README content, I'll generate the YAML configuration:
+
+```yaml
+description: An MCP server that provides Snowflake database integration capabilities using the Model Context Protocol
+run_command: mcp dev src/mcp_snowflake/server.py
+additional_installation_instructions: >
+  1. Run 'uv sync' to initialize Python environment
+  2. Activate virtual environment with 'source .venv/bin/activate'
+  3. If uvsync fails, configure UV settings:
+     - Set UV_INDEX_URL and UV_NATIVE_TLS environment variables
+     - Or add settings to ~/.config/uv/uv.toml
+required_env_vars:
+  - SNOWFLAKE_USERNAME  # While marked as optional in README, it's effectively required if system username doesn't match LDAP
+optional_env_vars:
+  UV_INDEX_URL: URL for PyPI mirror (https://artifactory.global.square/artifactory/api/pypi/block-pypi/simple)
+  UV_NATIVE_TLS: Enable native TLS support (set to "true")
+env_var_sources: >
+  - System environment variables
+  - Goose app settings (via Settings > Extensions > Snowflake extension)
+  - Shell environment
+  - ~/.config/uv/uv.toml file for UV-specific settings
+```
+
+Note: I've included `SNOWFLAKE_USERNAME` as a required environment variable even though it's marked as optional in the README, because it's effectively required if the system username doesn't match the LDAP username, which is a common case that requires explicit configuration.
+---
+Name: sq
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_sq/
+Based on the README content, here's the YAML representation:
+
+```yaml
+description: An MCP server that provides Square development environment tooling and pack management capabilities
+run_command: node ./dist/index.js
+additional_installation_instructions: >
+  1. Run 'npm install' to setup environment
+  2. Run 'npm run build' to build the server
+  3. For testing, you can use '@modelcontextprotocol/inspector' with 'npx @modelcontextprotocol/inspector node dist/index.js'
+env_var_sources: No explicit environment variables mentioned in the README
+required_env_vars: []  # No required env vars mentioned in README
+optional_env_vars: {}  # No optional env vars mentioned in README
+
+notes: >
+  - Server runs on port 3000 by default
+  - Can be integrated with Goose via StandardIO extension type
+  - Includes functionality to refresh pack configurations from Block's artifact repository
+```
+
+Note: Since there's no package.json, requirements.txt, or pyproject.toml files provided in the context, I've based this solely on the README content. The actual environment variables and dependencies might be defined in those files if they exist. You may want to review those files for a more complete configuration.
+---
+Name: sqlite
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_sqlite/
+```yaml
+description: An MCP server that provides SQLite database operations through the Model Context Protocol
+run_command: mcp_sqlite
+additional_installation_instructions: >
+  1. Initialize Python environment: uv sync
+  2. Activate virtual environment: source .venv/bin/activate
+  3. For development/testing, can use: mcp dev src/mcp_sqlite/server.py
+env_var_sources: No specific environment variables mentioned in README
+required_env_vars: []
+optional_env_vars: {}
+```
+
+Note: Based on the README content provided, this appears to be a straightforward MCP SQLite implementation that doesn't require any environment variables for basic operation. The main setup involves Python environment initialization using `uv`. The server runs on port 3000 by default and can be tested using the MCP Inspector tool at http://localhost:5173.
+
+For integration with Goose, the README provides specific instructions to add it as a StandardIO extension using the absolute path to the CLI in the virtual environment.
+
+If there are any additional configuration options or environment variables needed, they are not documented in the provided README. You may want to check the source code or other documentation for more detailed configuration options.
+---
+Name: square_api
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_square_api/
+Here's the YAML representation based on the README:
+
+```yaml
+description: An MCP server that provides complete Square API integration with OAuth support and type-safe parameter validation
+run_command: npx @block/mcp_square_api start
+additional_installation_instructions: >
+  1. Install globally: npm install -g @block/mcp_square_api
+  2. For first-time use, the browser will open for Square OAuth authentication
+  3. For local development, use npm link for testing changes
+env_var_sources: Square Developer Dashboard (https://developer.squareup.com)
+required_env_vars: []  # No strictly required env vars as OAuth flow handles authentication
+optional_env_vars:
+  ACCESS_TOKEN: Square API access token (if not using OAuth flow)
+  SANDBOX: Set to "true" to use Square Sandbox environment
+  PRODUCTION: Set to "true" to use Square Production environment
+notes: >
+  - SANDBOX and PRODUCTION cannot both be set to true
+  - If ACCESS_TOKEN is not provided, OAuth flow will be triggered automatically
+  - For development testing, use npx @modelcontextprotocol/inspector node dist/index.js
+```
+---
+Name: task_manager
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_task_manager/
+```yaml
+description: An MCP server for task management functionality that integrates with Goose via the Python MCP SDK
+run_command: mcp_task_manager
+additional_installation_instructions: >
+  1. Initialize Python environment: uv sync
+  2. Activate virtual environment: source .venv/bin/activate
+env_var_sources: No environment variables specified in README
+required_env_vars: []
+optional_env_vars: {}
+```
+
+Note: Based on the README content provided, this appears to be a basic MCP server implementation that doesn't specify any environment variables. The installation process focuses on Python virtual environment setup using `uv`. The server can be run directly with `mcp_task_manager` command after activation, or with `mcp dev` for development/testing purposes.
+
+Would you like me to help you identify any additional environment variables that might be needed by examining other configuration files in the project directory? Currently I only have access to the README content.
+---
+Name: tidal
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_tidal/
+```yaml
+description: An MCP server that provides access to TIDAL's API and SDK for music streaming capabilities
+
+run_command: npx -y @block/mcp_tidal@latest
+
+additional_installation_instructions: >
+  1. Create an app at https://developer.tidal.com/dashboard
+  2. Enable all required scopes in the app settings
+  3. For user-specific actions, obtain a refresh token from the API Reference page
+
+env_var_sources: >
+  - TIDAL_CLIENT_ID and TIDAL_CLIENT_SECRET from TIDAL Developer Dashboard
+  - TIDAL_REFRESH_TOKEN from API Reference authorization flow (optional for non-user actions)
+
+required_env_vars:
+  - TIDAL_CLIENT_ID
+  - TIDAL_CLIENT_SECRET
+
+optional_env_vars:
+  TIDAL_REFRESH_TOKEN: Required only for user-specific actions like saving tracks/playlists
+```
+
+Note: I've generated this YAML based on the README content, focusing on the core requirements for running the MCP. The README suggests this is primarily a Node.js-based project that interfaces with TIDAL's API. The environment variables are clearly documented in the installation section, with a distinction between the required credentials for basic API access and the optional refresh token for user-specific actions.
+---
+Name: ucmlreport
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_ucmlreport/
+```yaml
+description: An MCP server that generates and validates documentation for model reporting, including conceptual soundness reports, POC cover letters, and validation reports
+
+run_command: uvx mcp-ucmlreport --mode <docwriter|docresponder>
+
+additional_installation_instructions: >
+  1. Install the package using: uv pip install .
+  2. Verify installation with: mcp-ucmlreport --help
+  3. To use with Goose, add as extension through Settings > Extensions > Add
+
+required_env_vars: []
+
+optional_env_vars:
+  MODE: Set operating mode (docwriter or docresponder, defaults to docwriter)
+
+env_var_sources: No specific environment variables required based on README
+
+additional_notes: >
+  - For docwriter mode:
+    - Supports generating UCML Model Conceptual Soundness Reports, POC Cover Letters, and Model Validation Reports
+    - Can also generate custom reports with provided markdown templates
+  - For docresponder mode:
+    - Requires questions_filepath (markdown file with validator questions)
+    - Requires resources_dirpath (directory with model documentation resources)
+    - Requires output configuration (output_dirpath and output_filename)
+```
+---
+Name: vantage
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_vantage/
+```yaml
+description: An MCP server that provides integration with Vantage APIs for cost and usage analysis
+run_command: uv run mcp_vantage
+additional_installation_instructions: >
+  1. Initialize Python environment: uv sync
+  2. Activate virtual environment: source .venv/bin/activate
+  3. For development, can use 'mcp dev src/mcp_vantage/server.py'
+env_var_sources: >
+  Get your Vantage API token from your Vantage account settings
+required_env_vars:
+  - VANTAGE_API_TOKEN
+optional_env_vars: {}
+```
+
+Note: Based on the README content provided, I've generated a YAML response with the core information that could be determined. The README doesn't explicitly mention any optional environment variables, so I've left that as an empty object. If there are additional configuration files like pyproject.toml or requirements.txt that weren't shared, there might be more details that could be added to this response.
+---
+Name: websearch
+GitHub Link: https://github.com/block/mcp/tree/main/mcp_websearch/
+```yaml
+description: A web search MCP server that provides search functionality through the Model Context Protocol
+run_command: mcp_websearch
+additional_installation_instructions: >
+  1. Run 'uv sync' to initialize Python environment
+  2. Activate virtual environment with 'source .venv/bin/activate'
+  3. The server will run on port 3000 by default
+env_var_sources: No explicit environment variables mentioned in README
+required_env_vars: []
+optional_env_vars: {}
+
+notes: >
+  - Can be tested using MCP Inspector by running 'mcp dev src/mcp_websearch/server.py'
+  - For Goose integration, add as StandardIO extension with absolute path to CLI
+  - Default port is 3000
+```
+
+Note: The README doesn't specify any required or optional environment variables, so those fields are empty. You may want to check the actual source code or configuration files to determine if there are any environment variables needed that weren't documented in the README.
+---
