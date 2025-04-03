@@ -328,10 +328,8 @@ fn is_command_allowed_with_allowlist(
     cmd: &str,
     allowed_extensions: &Option<AllowedExtensions>,
 ) -> bool {
-    println!("\n\n\n\n\n\n------------\n\nChecking command: {}", cmd);
     // Extract the first part of the command (before any spaces)
     let first_part = cmd.split_whitespace().next().unwrap_or(cmd);
-    println!("First part: {}", first_part);
 
     // Extract the base command name (last part of the path)
     let cmd_base_with_ext = Path::new(first_part)
@@ -373,8 +371,6 @@ fn is_command_allowed_with_allowlist(
         }
         return false;
     }
-
-    println!("Allowed extensions: {:?}", allowed_extensions);
 
     match allowed_extensions {
         // No allowlist configured, allow all commands
