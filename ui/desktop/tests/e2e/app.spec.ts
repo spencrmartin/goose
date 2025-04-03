@@ -268,4 +268,99 @@ test.describe('Goose App', () => {
     // Take screenshot
     await mainWindow.screenshot({ path: 'test-results/directory-operations.png' });
   });
+
+  test('running quotes MCP server integration', async () => {
+    console.log('Testing Running Quotes MCP server integration...');
+
+    // Clean up any existing running-quotes extensions from localStorage
+    await mainWindow.evaluate(() => {
+      const USER_SETTINGS_KEY = 'user_settings';
+      const settings = JSON.parse(localStorage.getItem(USER_SETTINGS_KEY) || '{"extensions":[]}');
+      
+      // Remove any running-quotes extensions
+      settings.extensions = settings.extensions.filter(ext => ext.id !== 'running-quotes');
+      
+      // Save back to localStorage
+      localStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
+      
+      // Log the cleanup
+      console.log('Cleaned up existing running-quotes extensions');
+    });
+
+    // Reload the page to ensure settings are fresh
+    await mainWindow.reload();
+    await mainWindow.waitForLoadState('networkidle');
+
+    // Click the menu button (3 dots)
+    const menuButton = await mainWindow.waitForSelector('button:has(svg)', { timeout: 10000 });
+    await menuButton.click();
+
+    // Click Advanced Settings
+    const advancedSettingsButton = await mainWindow.waitForSelector('button:has-text("Advanced Settings")');
+    await advancedSettingsButton.click();
+
+    // Wait for settings page and take screenshot
+    await mainWindow.screenshot({ path: 'test-results/mcp-settings-page.png' });
+
+    // Click Add Custom Extension button and wait for modal
+    const addExtensionButton = await mainWindow.waitForSelector('button:has-text("Add Custom Extension")');
+    await addExtensionButton.click();
+
+    // Wait for modal and form to be fully rendered
+    await mainWindow.waitForSelector('form', { state: 'visible', timeout: 10000 });
+    console.log('Form found, waiting for modal animation...');
+    await mainWindow.waitForTimeout(1000); // Wait for modal animation
+
+    try {
+      // Fill ID (find by label text)
+      console.log('Filling ID field...');
+      await mainWindow.locator('label:has-text("ID *") + input[type="text"]').fill('running-quotes');
+
+      // Fill Name (find by label text)
+      console.log('Filling Name field...');
+      await mainWindow.locator('label:has-text("Name *") + input[type="text"]').fill('Running Quotes');
+
+      // Fill Description (find by label text)
+      console.log('Filling Description field...');
+      await mainWindow.locator('label:has-text("Description *") + input[type="text"]').fill('Inspirational running quotes MCP server');
+
+      // Fill Command (find by label text and placeholder)
+      console.log('Filling Command field...');
+      const mcpScriptPath = join(__dirname, 'basic-mcp.ts');
+      await mainWindow.locator('label:has-text("Command *") + input[placeholder="e.g. goosed mcp example"]')
+        .fill(`node ${mcpScriptPath}`);
+
+      // Take screenshot of filled form
+      await mainWindow.screenshot({ path: 'test-results/mcp-form-filled.png' });
+
+      // Add a delay to inspect the form
+      console.log('Waiting 5 seconds to inspect form...');
+      await mainWindow.waitForTimeout(5000);
+
+      // Click Add button (it's a submit button)
+      console.log('Clicking Add button...');
+      await mainWindow.locator('button[type="submit"]').click();
+
+      // Wait a bit and dump HTML to see toast structure
+      await mainWindow.waitForTimeout(2000);
+      const html = await mainWindow.evaluate(() => document.documentElement.outerHTML);
+      console.log('HTML after submit:', html);
+
+      // Wait for success toast and take screenshot
+      await mainWindow.waitForSelector('.Toastify__toast-body div div:has-text("Successfully enabled extension")',
+        { state: 'visible', timeout: 10000 });
+      await mainWindow.screenshot({ path: 'test-results/mcp-extension-added.png' });
+      console.log('Extension added successfully');
+
+      // Click Exit button to return to chat
+      const exitButton = await mainWindow.waitForSelector('button:has-text("Exit")', { timeout: 5000 });
+      await exitButton.click();
+
+    } catch (error) {
+      // Take error screenshot
+      await mainWindow.screenshot({ path: 'test-results/mcp-form-error.png' });
+      console.error('Error during form filling:', error);
+      throw error;
+    }
+  });
 });
