@@ -129,10 +129,26 @@ impl TruncateAgent {
         extension_name: String,
         request_id: String,
     ) -> (String, Result<Vec<Content>, ToolError>) {
-        let config = ExtensionManager::get_config(&extension_name).unwrap().unwrap();
+        let config = match ExtensionManager::get_config(&extension_name) {
+            Ok(Some(config)) => config,
+            Ok(None) => return (
+                request_id,
+                Err(ToolError::ExecutionError(
+                    format!("Extension '{}' not found. Please check the extension name and try again.", extension_name)
+                ))
+            ),
+            Err(e) => return (
+                request_id,
+                Err(ToolError::ExecutionError(
+                    format!("Failed to get extension config: {}", e)
+                ))
+            ),
+        };
+
         let result = capabilities.add_extension(config).await
             .map(|_| vec![Content::text("Extension installed successfully")])
             .map_err(|e| ToolError::ExecutionError(e.to_string()));
+        
         (request_id, result)
     }
 }
@@ -270,6 +286,7 @@ impl Agent for TruncateAgent {
             "platform__install_extension".to_string(),
             "Install additional capabilities to help complete tasks.
             Install an extension by providing the extension name.
+            Enable an extension by providing the extension name.
             ".to_string(),
             json!({
                 "type": "object",
