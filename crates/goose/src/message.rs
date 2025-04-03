@@ -59,6 +59,14 @@ pub struct ToolConfirmationRequest {
     pub prompt: Option<String>,
 }
 
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallExtensionRequest {
+    pub id: String,
+    pub extension_name: String,
+}
+
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ThinkingContent {
     pub thinking: String,
@@ -79,6 +87,7 @@ pub enum MessageContent {
     ToolRequest(ToolRequest),
     ToolResponse(ToolResponse),
     ToolConfirmationRequest(ToolConfirmationRequest),
+    InstallExtensionRequest(InstallExtensionRequest),
     Thinking(ThinkingContent),
     RedactedThinking(RedactedThinkingContent),
 }
@@ -127,6 +136,13 @@ impl MessageContent {
         })
     }
 
+    pub fn install_extension_request<S: Into<String>>(id: S, extension_name: String) -> Self {
+        MessageContent::InstallExtensionRequest(InstallExtensionRequest {
+            id: id.into(),
+            extension_name,
+        })
+    }
+
     pub fn thinking<S1: Into<String>, S2: Into<String>>(thinking: S1, signature: S2) -> Self {
         MessageContent::Thinking(ThinkingContent {
             thinking: thinking.into(),
@@ -156,6 +172,14 @@ impl MessageContent {
     pub fn as_tool_confirmation_request(&self) -> Option<&ToolConfirmationRequest> {
         if let MessageContent::ToolConfirmationRequest(ref tool_confirmation_request) = self {
             Some(tool_confirmation_request)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_install_extension_request(&self) -> Option<&InstallExtensionRequest> {
+        if let MessageContent::InstallExtensionRequest(ref install_extension_request) = self {
+            Some(install_extension_request)
         } else {
             None
         }

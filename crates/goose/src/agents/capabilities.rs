@@ -545,8 +545,6 @@ impl Capabilities {
             self.list_resources(tool_call.arguments.clone()).await
         } else if tool_call.name == "platform__discover_extensions" {
             self.discover_extensions().await
-        } else if tool_call.name == "platform__install_extension" {
-            self.install_extension(tool_call.arguments.clone()).await
         } else {
             // Else, dispatch tool call based on the prefix naming convention
             let (client_name, client) = self
@@ -737,14 +735,6 @@ impl Capabilities {
         output_parts.push("Remind the user that to install a new extension, they should use the Settings page in Goose or the CLI configure command with the relevant run command.".to_string());
 
         Ok(vec![Content::text(output_parts.join("\n"))])
-    }
-
-    pub async fn install_extension(&self, arguments: Value) -> Result<Vec<Content>, ToolError> {
-        let extension_name = arguments.get("extension_name").and_then(|v| v.as_str()).unwrap_or("");
-        let extension_name = extension_name.to_string();
-        println!("Installing extension: {}", extension_name);
-        // self.add_extension(extension_name).await;
-        Ok(vec![])
     }
 }
 
