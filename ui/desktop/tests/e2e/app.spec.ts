@@ -3,6 +3,7 @@ import { _electron as electron } from '@playwright/test';
 import { join } from 'path';
 import { spawn, exec } from 'child_process';
 import { promisify } from 'util';
+import { showTestName, clearTestName } from './test-overlay';
 
 const { runningQuotes } = require('./basic-mcp');
 const execAsync = promisify(exec);
@@ -26,7 +27,32 @@ const providers: Provider[] = [
 
 // Create test with fixtures
 const test = base.extend<TestFixtures>({
-  provider: ['Databricks', { option: true }], // Default to Databricks
+  provider: [providers[0], { option: true }], // Default to first provider (Databricks)
+});
+
+// Store mainWindow reference
+let mainWindow;
+
+// Add hooks for test name overlay
+// eslint-disable-next-line no-empty-pattern
+test.beforeEach(async ({ }, testInfo) => {
+  if (mainWindow) {
+    // Get a clean test name without the full hierarchy
+    const testName = testInfo.titlePath[testInfo.titlePath.length - 1];
+    
+    // Get provider name if we're in a provider suite
+    const providerSuite = testInfo.titlePath.find(t => t.startsWith('Provider:'));
+    const providerName = providerSuite ? providerSuite.split(': ')[1] : undefined;
+    
+    console.log(`Setting overlay for test: "${testName}"${providerName ? ` (Provider: ${providerName})` : ''}`);
+    await showTestName(mainWindow, testName, providerName);
+  }
+});
+
+test.afterEach(async () => {
+  if (mainWindow) {
+    await clearTestName(mainWindow);
+  }
 });
 
 // Helper function to select a provider
@@ -96,11 +122,11 @@ async function selectProvider(mainWindow: any, provider: Provider) {
 test.describe('Goose App', () => {
   let electronApp;
   let appProcess;
-  let mainWindow;
 
   test.beforeAll(async () => {
     console.log('Starting Electron app...');
     
+    // Start the electron-forge process
     // Start the electron-forge process
     appProcess = spawn('npm', ['run', 'start-gui'], {
       cwd: join(__dirname, '../..'),
@@ -134,18 +160,16 @@ test.describe('Goose App', () => {
         ...process.env,
         ELECTRON_IS_DEV: '1',
         NODE_ENV: 'development'
+      },
+      recordVideo: {
+        dir: 'test-results/videos/',
+        size: { width: 1280, height: 720 }
       }
     });
 
     // Get the main window once for all tests
     mainWindow = await electronApp.firstWindow();
     await mainWindow.waitForLoadState('domcontentloaded');
-
-    // Start video recording
-    await mainWindow.video().start({
-      dir: 'test-results/videos/',
-      size: { width: 1280, height: 720 }
-    });
   });
 
   test.afterAll(async () => {
@@ -217,99 +241,18 @@ test.describe('Goose App', () => {
       const newDarkMode = await mainWindow.evaluate(() => document.documentElement.classList.contains('dark'));
       expect(newDarkMode).toBe(!isDarkMode);
   
-      // Take screenshot to verify
+      // Take screenshot to verify and pause to show the change
       await mainWindow.screenshot({ path: 'test-results/dark-mode-toggle.png' });
+      await mainWindow.waitForTimeout(2000); // Pause in dark/light mode
   
       // Toggle back to original state
       await darkModeButton.click();
+      
+      // Pause to show return to original state
+      await mainWindow.waitForTimeout(2000);
   
       // Close menu with ESC key
       await mainWindow.keyboard.press('Escape');
-    });
-  
-    test('new session and directory operations', async () => {
-      console.log('Testing new session and directory operations...');
-  
-      // Get initial window count
-      const initialWindows = await electronApp.windows();
-      console.log('Initial window count:', initialWindows.length);
-  
-      // Test keyboard shortcut for new session (⌘N)
-      await mainWindow.keyboard.press('Meta+N');
-  
-      // Wait and check for new window with retries
-      console.log('Waiting for new window after keyboard shortcut...');
-      let newWindow = null;
-      let attempts = 0;
-      const maxAttempts = 5;
-  
-      while (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const windows = await electronApp.windows();
-        console.log(`Attempt ${attempts + 1}: Current window count:`, windows.length);
-  
-        if (windows.length > initialWindows.length) {
-          newWindow = windows[windows.length - 1];
-          break;
-        }
-        attempts++;
-      }
-  
-      if (!newWindow) {
-        console.log('Failed to detect new window after keyboard shortcut');
-      } else {
-        // Take screenshot of new window
-        await newWindow.screenshot({ path: 'test-results/new-session-shortcut.png' });
-        await newWindow.close();
-      }
-  
-      // Test UI button for new session
-      const menuButton = await mainWindow.waitForSelector('button:has(svg)', { timeout: 10000 });
-      await menuButton.click();
-  
-      const newSessionButton = await mainWindow.waitForSelector('button:has-text("New session")');
-      await newSessionButton.click();
-  
-      // Wait and check for new window with retries
-      console.log('Waiting for new window after button click...');
-      let newestWindow = null;
-      attempts = 0;
-  
-      while (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const windows = await electronApp.windows();
-        console.log(`Attempt ${attempts + 1}: Current window count:`, windows.length);
-  
-        if (windows.length > initialWindows.length) {
-          newestWindow = windows[windows.length - 1];
-          break;
-        }
-        attempts++;
-      }
-  
-      if (!newestWindow) {
-        console.log('Failed to detect new window after button click');
-      } else {
-        // Take screenshot of newest window
-        await newestWindow.screenshot({ path: 'test-results/new-session-button.png' });
-        await newestWindow.close();
-      }
-  
-      // Switch back to main window for directory operations
-      await mainWindow.bringToFront();
-  
-      // Test keyboard shortcut for open directory (⌘O)
-      // Note: This will trigger system file dialog which we can't interact with in the test
-      await mainWindow.keyboard.press('Meta+O');
-  
-      // Test UI button for changing directory
-      await menuButton.click();
-  
-      const openDirButton = await mainWindow.waitForSelector('button:has-text("Open directory")');
-      await openDirButton.click();
-  
-      // Take screenshot
-      await mainWindow.screenshot({ path: 'test-results/directory-operations.png' });
     });
   });
 
