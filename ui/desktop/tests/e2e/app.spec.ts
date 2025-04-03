@@ -21,7 +21,7 @@ type TestFixtures = {
 // Define available providers
 const providers: Provider[] = [
   { name: 'Databricks', testPath: 'div:has(h3:text("Databricks"))[class*="relative bg-bgApp rounded-lg"]' },
-  { name: 'OpenAI', testPath: 'div:has(h3:text("OpenAI"))[class*="relative bg-bgApp rounded-lg"]' }
+  { name: 'Google', testPath: 'div:has(h3:text("Google"))[class*="relative bg-bgApp rounded-lg"]' }
 ];
 
 // Create test with fixtures
@@ -140,6 +140,12 @@ test.describe('Goose App', () => {
     // Get the main window once for all tests
     mainWindow = await electronApp.firstWindow();
     await mainWindow.waitForLoadState('domcontentloaded');
+
+    // Start video recording
+    await mainWindow.video().start({
+      dir: 'test-results/videos/',
+      size: { width: 1280, height: 720 }
+    });
   });
 
   test.afterAll(async () => {
