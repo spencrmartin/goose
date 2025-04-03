@@ -125,8 +125,7 @@ test.describe('Goose App', () => {
 
   test.beforeAll(async () => {
     console.log('Starting Electron app...');
-    
-    // Start the electron-forge process
+
     // Start the electron-forge process
     appProcess = spawn('npm', ['run', 'start-gui'], {
       cwd: join(__dirname, '../..'),
