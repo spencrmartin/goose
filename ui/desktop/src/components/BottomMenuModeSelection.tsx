@@ -121,13 +121,14 @@ export const BottomMenuModeSelection = () => {
   };
 
   const getIconForMode = () => {
-    switch (gooseMode) {
-      case 'auto':
-        return <AutoMode className="text-textSubtle hover:text-textStandard w-4 h-4" />;
-      case 'chat':
-        return <ChatMode className="text-textSubtle hover:text-textStandard w-4 h-4" />;
-      default:
-        return <Settings className="text-textSubtle hover:text-textStandard w-4 h-4" />;
+    if (gooseMode === 'auto') {
+      return <AutoMode className="text-textSubtle hover:text-textStandard w-4 h-4" />;
+    } else if (gooseMode === 'chat') {
+      return <ChatMode className="text-textSubtle hover:text-textStandard w-4 h-4" />;
+    } else if (gooseMode.includes('approve')) {
+      return <ChatMode className="text-textSubtle hover:text-textStandard w-4 h-4" />;
+    } else {
+      return <Settings className="text-textSubtle hover:text-textStandard w-4 h-4" />;
     }
   };
 
