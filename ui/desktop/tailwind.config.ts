@@ -7,6 +7,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Cash Sans', 'sans-serif'],
+        mono: ['Cash Sans Mono', 'monospace'],
       },
       boxShadow: {
         'tooltip': '0 4px 32px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.1)',
@@ -87,6 +88,13 @@ export default {
         slate: 'var(--slate)',
         blockTeal: 'var(--block-teal)',
         blockOrange: 'var(--block-orange)',
+      },
+      typography: {
+        DEFAULT: {
+          css: {
+            color: 'var(--text-standard)',
+          },
+        },
       },
     },
   },

@@ -12,12 +12,13 @@ use tracing::{debug, error, instrument, warn};
 use super::agent::SessionConfig;
 use super::detect_read_only_tools;
 use super::extension::ToolInfo;
+use super::types::ToolResultReceiver;
 use super::Agent;
 use crate::agents::capabilities::{get_parameter_names, Capabilities};
 use crate::agents::extension::{ExtensionConfig, ExtensionResult};
 use crate::agents::ToolPermissionStore;
 use crate::config::Config;
-use crate::message::{Message, ToolRequest};
+use crate::message::{Message, MessageContent, ToolRequest};
 use crate::providers::base::Provider;
 use crate::providers::errors::ProviderError;
 use crate::providers::toolshim::{
@@ -29,9 +30,9 @@ use crate::token_counter::TokenCounter;
 use crate::truncate::{truncate_messages, OldestFirstTruncation};
 use anyhow::{anyhow, Result};
 use indoc::indoc;
-use mcp_core::prompt::Prompt;
-use mcp_core::protocol::GetPromptResult;
-use mcp_core::{tool::Tool, Content, ToolError};
+use mcp_core::{
+    prompt::Prompt, protocol::GetPromptResult, tool::Tool, Content, ToolError, ToolResult,
+};
 use serde_json::{json, Value};
 use std::time::Duration;
 
@@ -44,19 +45,24 @@ pub struct TruncateAgent {
     token_counter: TokenCounter,
     confirmation_tx: mpsc::Sender<(String, bool)>, // (request_id, confirmed)
     confirmation_rx: Mutex<mpsc::Receiver<(String, bool)>>,
+    tool_result_tx: mpsc::Sender<(String, ToolResult<Vec<Content>>)>,
+    tool_result_rx: ToolResultReceiver,
 }
 
 impl TruncateAgent {
     pub fn new(provider: Box<dyn Provider>) -> Self {
         let token_counter = TokenCounter::new(provider.get_model_config().tokenizer_name());
-        // Create channel with buffer size 32 (adjust if needed)
-        let (tx, rx) = mpsc::channel(32);
+        // Create channels with buffer size 32 (adjust if needed)
+        let (confirm_tx, confirm_rx) = mpsc::channel(32);
+        let (tool_tx, tool_rx) = mpsc::channel(32);
 
         Self {
             capabilities: Mutex::new(Capabilities::new(provider)),
             token_counter,
-            confirmation_tx: tx,
-            confirmation_rx: Mutex::new(rx),
+            confirmation_tx: confirm_tx,
+            confirmation_rx: Mutex::new(confirm_rx),
+            tool_result_tx: tool_tx,
+            tool_result_rx: Arc::new(Mutex::new(tool_rx)),
         }
     }
 
@@ -235,6 +241,21 @@ impl Agent for TruncateAgent {
             tools.push(list_resources_tool);
         }
 
+        let (tools_with_readonly_annotation, tools_without_annotation): (Vec<String>, Vec<String>) =
+            tools.iter().fold((vec![], vec![]), |mut acc, tool| {
+                match &tool.annotations {
+                    Some(annotations) => {
+                        if annotations.read_only_hint {
+                            acc.0.push(tool.name.clone());
+                        }
+                    }
+                    None => {
+                        acc.1.push(tool.name.clone());
+                    }
+                }
+                acc
+            });
+
         let config = capabilities.provider().get_model_config();
         let mut system_prompt = capabilities.get_system_prompt().await;
         let mut toolshim_tools = vec![];
@@ -291,8 +312,21 @@ impl Agent for TruncateAgent {
                         // Reset truncation attempt
                         truncation_attempt = 0;
 
-                        // Yield the assistant's response
-                        yield response.clone();
+                        // Yield the assistant's response, but filter out frontend tool requests that we'll process separately
+                        let filtered_response = Message {
+                            role: response.role.clone(),
+                            created: response.created,
+                            content: response.content.iter().filter(|c| {
+                                if let MessageContent::ToolRequest(req) = c {
+                                    // Only filter out frontend tool requests
+                                    if let Ok(tool_call) = &req.tool_call {
+                                        return !capabilities.is_frontend_tool(&tool_call.name);
+                                    }
+                                }
+                                true
+                            }).cloned().collect(),
+                        };
+                        yield filtered_response.clone();
 
                         tokio::task::yield_now().await;
 
@@ -308,34 +342,67 @@ impl Agent for TruncateAgent {
 
                         // Process tool requests depending on goose_mode
                         let mut message_tool_response = Message::user();
+
+                        // First handle any frontend tool requests
+                        let mut remaining_requests = Vec::new();
+                        for request in &tool_requests {
+                            if let Ok(tool_call) = request.tool_call.clone() {
+                                if capabilities.is_frontend_tool(&tool_call.name) {
+                                    // Send frontend tool request and wait for response
+                                    yield Message::assistant().with_frontend_tool_request(
+                                        request.id.clone(),
+                                        Ok(tool_call.clone())
+                                    );
+
+                                    if let Some((id, result)) = self.tool_result_rx.lock().await.recv().await {
+                                        message_tool_response = message_tool_response.with_tool_response(id, result);
+                                    }
+                                } else {
+                                    remaining_requests.push(request);
+                                }
+                            } else {
+                                remaining_requests.push(request);
+                            }
+                        }
+
                         // Clone goose_mode once before the match to avoid move issues
                         let mode = goose_mode.clone();
                         match mode.as_str() {
                             "approve" | "smart_approve" => {
-                                let mut read_only_tools = Vec::new();
                                 let mut needs_confirmation = Vec::<&ToolRequest>::new();
                                 let mut approved_tools = Vec::new();
+                                let mut llm_detect_candidates = Vec::<&ToolRequest>::new();
+                                let mut detected_read_only_tools = Vec::new();
 
                                 // First check permissions for all tools
                                 let store = ToolPermissionStore::load()?;
-                                for request in tool_requests.iter() {
+                                for request in remaining_requests.iter() {
                                     if let Ok(tool_call) = request.tool_call.clone() {
-                                        if let Some(allowed) = store.check_permission(request) {
+                                        if tools_with_readonly_annotation.contains(&tool_call.name) {
+                                            approved_tools.push((request.id.clone(), tool_call));
+                                        } else if let Some(allowed) = store.check_permission(request) {
                                             if allowed {
                                                 // Instead of executing immediately, collect approved tools
                                                 approved_tools.push((request.id.clone(), tool_call));
                                             } else {
+                                                // If the tool doesn't have any annotation, we can use llm-as-a-judge to check permission.
+                                                if tools_without_annotation.contains(&tool_call.name) {
+                                                    llm_detect_candidates.push(request);
+                                                }
                                                 needs_confirmation.push(request);
                                             }
                                         } else {
+                                            if tools_without_annotation.contains(&tool_call.name) {
+                                                llm_detect_candidates.push(request);
+                                            }
                                             needs_confirmation.push(request);
                                         }
                                     }
                                 }
 
-                                // Only check read-only status for tools needing confirmation
-                                if !needs_confirmation.is_empty() && mode == "smart_approve" {
-                                    read_only_tools = detect_read_only_tools(&capabilities, needs_confirmation.clone()).await;
+                                // Only check read-only status for tools without annotation
+                                if !llm_detect_candidates.is_empty() && mode == "smart_approve" {
+                                    detected_read_only_tools = detect_read_only_tools(&capabilities, llm_detect_candidates.clone()).await;
                                 }
 
                                 // Handle pre-approved and read-only tools in parallel
@@ -351,7 +418,7 @@ impl Agent for TruncateAgent {
                                 for request in &needs_confirmation {
                                     if let Ok(tool_call) = request.tool_call.clone() {
                                         // Skip confirmation if the tool_call.name is in the read_only_tools list
-                                        if read_only_tools.contains(&tool_call.name) {
+                                        if detected_read_only_tools.contains(&tool_call.name) {
                                             let tool_future = Self::create_tool_future(&capabilities, tool_call, request.id.clone());
                                             tool_futures.push(tool_future);
                                         } else {
@@ -379,7 +446,10 @@ impl Agent for TruncateAgent {
                                                         // User declined - add declined response
                                                         message_tool_response = message_tool_response.with_tool_response(
                                                             request.id.clone(),
-                                                            Ok(vec![Content::text("User declined to run this tool. Don't try to make the same tool call again. If there is no other ways to do it, it is ok to stop.")]),
+                                                            Ok(vec![Content::text(
+                                                                "The user has declined to run this tool. \
+                                                                DO NOT attempt to call this tool again. \
+                                                                If there are no alternative methods to proceed, clearly explain the situation and STOP.")]),
                                                         );
                                                     }
                                                     break; // Exit the loop once the matching `req_id` is found
@@ -399,7 +469,7 @@ impl Agent for TruncateAgent {
                             },
                             "chat" => {
                                 // Skip all tool calls in chat mode
-                                for request in &tool_requests {
+                                for request in &remaining_requests {
                                     message_tool_response = message_tool_response.with_tool_response(
                                         request.id.clone(),
                                         Ok(vec![Content::text(
@@ -421,7 +491,7 @@ impl Agent for TruncateAgent {
                                 }
                                 // Process tool requests in parallel
                                 let mut tool_futures = Vec::new();
-                                for request in &tool_requests {
+                                for request in &remaining_requests {
                                     if let Ok(tool_call) = request.tool_call.clone() {
                                         let tool_future = Self::create_tool_future(&capabilities, tool_call, request.id.clone());
                                         tool_futures.push(tool_future);
@@ -545,6 +615,12 @@ impl Agent for TruncateAgent {
     async fn provider(&self) -> Arc<Box<dyn Provider>> {
         let capabilities = self.capabilities.lock().await;
         capabilities.provider()
+    }
+
+    async fn handle_tool_result(&self, id: String, result: ToolResult<Vec<Content>>) {
+        if let Err(e) = self.tool_result_tx.send((id, result)).await {
+            tracing::error!("Failed to send tool result: {}", e);
+        }
     }
 }
 
