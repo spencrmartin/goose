@@ -1,7 +1,9 @@
 import ArrowDown from './ArrowDown';
 import ArrowUp from './ArrowUp';
 import Attach from './Attach';
+import AutoMode from './AutoMode';
 import Back from './Back';
+import ChatMode from './ChatMode';
 import ChatSmart from './ChatSmart';
 import Check from './Check';
 import ChevronDown from './ChevronDown';
@@ -24,7 +26,9 @@ export {
   ArrowDown,
   ArrowUp,
   Attach,
+  AutoMode,
   Back,
+  ChatMode,
   ChatSmart,
   Check,
   ChevronDown,
