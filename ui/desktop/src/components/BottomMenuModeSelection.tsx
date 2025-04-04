@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getApiUrl, getSecretKey } from '../config';
-import { Settings, AutoMode, ChatMode } from './icons';
+import { Settings, AutoMode, ChatMode, ApprovalMode } from './icons';
 import {
   all_goose_modes,
   filterGooseModes,
@@ -126,7 +126,7 @@ export const BottomMenuModeSelection = () => {
     } else if (gooseMode === 'chat') {
       return <ChatMode className="text-textSubtle hover:text-textStandard w-4 h-4" />;
     } else if (gooseMode.includes('approve')) {
-      return <ChatMode className="text-textSubtle hover:text-textStandard w-4 h-4" />;
+      return <ApprovalMode className="text-textSubtle hover:text-textStandard w-4 h-4" />;
     } else {
       return <Settings className="text-textSubtle hover:text-textStandard w-4 h-4" />;
     }
