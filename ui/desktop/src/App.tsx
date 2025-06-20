@@ -21,6 +21,7 @@ import SchedulesView from './components/schedule/SchedulesView';
 import ProviderSettings from './components/settings/providers/ProviderSettingsPage';
 import RecipeEditor from './components/RecipeEditor';
 import RecipesView from './components/RecipesView';
+import DiffViewer from './components/DiffViewer';
 import { useChat } from './hooks/useChat';
 
 import 'react-toastify/dist/ReactToastify.css';
@@ -47,7 +48,8 @@ export type View =
   | 'loading'
   | 'recipeEditor'
   | 'recipes'
-  | 'permission';
+  | 'permission'
+  | 'diffViewer';
 
 export type ViewOptions = {
   // Settings view options
@@ -87,6 +89,15 @@ const getInitialView = (): ViewConfig => {
       view: 'recipeEditor',
       viewOptions: {
         config: windowConfig.recipeConfig,
+      },
+    };
+  }
+
+  if (viewFromUrl === 'diffViewer' && windowConfig?.diffContent) {
+    return {
+      view: 'diffViewer',
+      viewOptions: {
+        diffContent: windowConfig.diffContent,
       },
     };
   }
@@ -150,6 +161,9 @@ export default function App() {
       if (viewType === 'recipeEditor' && recipeConfig) {
         console.log('Setting view to recipeEditor with config:', recipeConfig);
         setView('recipeEditor', { config: recipeConfig });
+      } else if (viewType === 'diffViewer' && window.appConfig.get('diffContent')) {
+        console.log('Setting view to diffViewer with diff content');
+        setView('diffViewer', { diffContent: window.appConfig.get('diffContent') });
       } else {
         setView(viewType as View);
       }
@@ -319,6 +333,12 @@ export default function App() {
           view: viewFromUrl,
         };
         setView(viewFromUrl, initialViewOptions);
+      } else if (viewFromUrl === 'diffViewer') {
+        const initialViewOptions = {
+          diffContent: windowConfig?.diffContent,
+          view: viewFromUrl,
+        };
+        setView(viewFromUrl, initialViewOptions);
       } else {
         setView(viewFromUrl as View);
       }
@@ -329,7 +349,7 @@ export default function App() {
 
   useEffect(() => {
     console.log(`View changed to: ${view}`);
-    if (view !== 'chat' && view !== 'recipeEditor') {
+    if (view !== 'chat' && view !== 'recipeEditor' && view !== 'diffViewer') {
       console.log('Not in chat view, clearing loading session state');
       setIsLoadingSession(false);
     }
@@ -550,6 +570,12 @@ export default function App() {
           {view === 'recipeEditor' && (
             <RecipeEditor
               config={(viewOptions?.config as Recipe) || window.electron.getConfig().recipeConfig}
+            />
+          )}
+          {view === 'diffViewer' && (
+            <DiffViewer
+              diffContent={(viewOptions?.diffContent as string) || ''}
+              onClose={() => window.close()}
             />
           )}
           {view === 'recipes' && <RecipesView onBack={() => setView('chat')} />}
