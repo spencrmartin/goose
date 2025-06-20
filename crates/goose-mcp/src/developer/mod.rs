@@ -13,6 +13,7 @@ use std::{
     io::Cursor,
     path::{Path, PathBuf},
     pin::Pin,
+    sync::{Arc, Mutex},
 };
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
@@ -42,7 +43,6 @@ use self::editor_models::{create_editor_model, EditorModel};
 use self::shell::{expand_path, get_shell_config, is_absolute_path, normalize_line_endings};
 use indoc::indoc;
 use std::process::Stdio;
-use std::sync::{Arc, Mutex};
 use xcap::{Monitor, Window};
 
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
@@ -100,6 +100,8 @@ pub struct DeveloperRouter {
     file_history: Arc<Mutex<HashMap<PathBuf, Vec<String>>>>,
     ignore_patterns: Arc<Gitignore>,
     editor_model: Option<EditorModel>,
+    checkpoint_dir: PathBuf,
+    checkpoint_index: Arc<Mutex<HashMap<PathBuf, Vec<PathBuf>>>>,
 }
 
 impl Default for DeveloperRouter {
@@ -461,6 +463,10 @@ impl DeveloperRouter {
 
         let ignore_patterns = builder.build().expect("Failed to build ignore patterns");
 
+        let cwd = std::env::current_dir().expect("cwd");
+        let chk = cwd.join(".goose_checkpoints");
+        std::fs::create_dir_all(&chk).ok();
+
         Self {
             tools: vec![
                 bash_tool,
@@ -474,6 +480,8 @@ impl DeveloperRouter {
             file_history: Arc::new(Mutex::new(HashMap::new())),
             ignore_patterns: Arc::new(ignore_patterns),
             editor_model,
+            checkpoint_dir: chk,
+            checkpoint_index: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -1277,6 +1285,8 @@ impl Clone for DeveloperRouter {
             file_history: Arc::clone(&self.file_history),
             ignore_patterns: Arc::clone(&self.ignore_patterns),
             editor_model: create_editor_model(), // Recreate the editor model since it's not Clone
+            checkpoint_dir: self.checkpoint_dir.clone(),
+            checkpoint_index: Arc::clone(&self.checkpoint_index),
         }
     }
 }
@@ -1707,6 +1717,8 @@ mod tests {
             file_history: Arc::new(Mutex::new(HashMap::new())),
             ignore_patterns: Arc::new(ignore_patterns),
             editor_model: None,
+            checkpoint_dir: temp_dir.path().join(".goose_checkpoints"),
+            checkpoint_index: Arc::new(Mutex::new(HashMap::new())),
         };
 
         // Test basic file matching
@@ -1758,6 +1770,8 @@ mod tests {
             file_history: Arc::new(Mutex::new(HashMap::new())),
             ignore_patterns: Arc::new(ignore_patterns),
             editor_model: None,
+            checkpoint_dir: temp_dir.path().join(".goose_checkpoints"),
+            checkpoint_index: Arc::new(Mutex::new(HashMap::new())),
         };
 
         // Try to write to an ignored file
@@ -1818,6 +1832,8 @@ mod tests {
             file_history: Arc::new(Mutex::new(HashMap::new())),
             ignore_patterns: Arc::new(ignore_patterns),
             editor_model: None,
+            checkpoint_dir: temp_dir.path().join(".goose_checkpoints"),
+            checkpoint_index: Arc::new(Mutex::new(HashMap::new())),
         };
 
         // Create an ignored file
