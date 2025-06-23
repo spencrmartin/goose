@@ -11,6 +11,7 @@ import Close from './Close';
 import Copy from './Copy';
 import Document from './Document';
 import Edit from './Edit';
+import { History } from './History';
 import Idea from './Idea';
 import More from './More';
 import Refresh from './Refresh';
@@ -35,6 +36,7 @@ export {
   Copy,
   Document,
   Edit,
+  History,
   Idea,
   Gear,
   More,
