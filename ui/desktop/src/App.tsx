@@ -429,19 +429,8 @@ export default function App() {
     };
   }, []);
 
-  // Listen for open-diff-viewer and toggle-diff-viewer events at App level
+  // Listen for toggle-diff-viewer event at App level
   useEffect(() => {
-    const handleOpenDiffViewer = () => {
-      const diffContent = window.pendingDiffContent;
-      if (diffContent) {
-        window.electron.logInfo('Opening diff viewer as side panel');
-        setDiffSidePanelContent(diffContent);
-        setIsDiffSidePanelOpen(true);
-        // Clear the pending diff content
-        window.pendingDiffContent = undefined;
-      }
-    };
-
     const handleToggleDiffViewer = () => {
       const diffContent = window.pendingDiffContent;
       if (isDiffSidePanelOpen && diffContent === diffSidePanelContent) {
@@ -457,11 +446,9 @@ export default function App() {
       window.pendingDiffContent = undefined;
     };
 
-    window.addEventListener('open-diff-viewer', handleOpenDiffViewer);
     window.addEventListener('toggle-diff-viewer', handleToggleDiffViewer);
 
     return () => {
-      window.removeEventListener('open-diff-viewer', handleOpenDiffViewer);
       window.removeEventListener('toggle-diff-viewer', handleToggleDiffViewer);
     };
   }, [isDiffSidePanelOpen, diffSidePanelContent]);
