@@ -22,6 +22,34 @@ import MessageCopyLink from './MessageCopyLink';
 import { NotificationEvent } from '../hooks/useMessageStream';
 import { FileDiff } from 'lucide-react';
 
+// Reusable side panel button component
+interface SidePanelButtonProps {
+  icon: React.ReactNode;
+  tooltip: string;
+  onClick: () => void;
+  className?: string;
+}
+
+function SidePanelButton({ icon, tooltip, onClick, className = '' }: SidePanelButtonProps) {
+  return (
+    <div className={`absolute top-1 -right-12 ${className}`}>
+      <div className="relative group">
+        <button
+          onClick={onClick}
+          className="p-1 hover:bg-bgStandard rounded transition-all duration-200 ease-in-out flex items-center transform hover:scale-105"
+          title={tooltip}
+        >
+          {icon}
+        </button>
+        {/* Tooltip */}
+        <div className="absolute right-0 top-full mt-1 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-10">
+          {tooltip}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface GooseMessageProps {
   // messages up to this index are presumed to be "history" from a resumed session, this is used to track older tool confirmation requests
   // anything before this index should not render any buttons, but anything after should
@@ -207,33 +235,23 @@ export default function GooseMessage({
             
             {/* Diff button positioned at the right edge of the message area, aligned with user responses */}
             {toolRequests.some((toolRequest) => hasDiffContent(toolResponsesMap.get(toolRequest.id))) && (
-              <div className="absolute top-1 -right-12">
-                <div className="relative group">
-                  <button
-                    onClick={() => {
-                      // Find the first tool request with diff content and toggle its diff
-                      const toolRequestWithDiff = toolRequests.find((toolRequest) => 
-                        hasDiffContent(toolResponsesMap.get(toolRequest.id))
-                      );
-                      if (toolRequestWithDiff) {
-                        const diffContent = extractDiffContent(toolResponsesMap.get(toolRequestWithDiff.id));
-                        if (diffContent) {
-                          window.pendingDiffContent = diffContent;
-                          window.dispatchEvent(new CustomEvent('toggle-diff-viewer'));
-                        }
-                      }
-                    }}
-                    className="p-1 hover:bg-bgStandard rounded transition-all duration-200 ease-in-out flex items-center transform hover:scale-105"
-                    title="Show/Hide Diff"
-                  >
-                    <FileDiff size={16} className="text-textSubtle hover:text-textStandard transition-colors duration-200" />
-                  </button>
-                  {/* Tooltip */}
-                  <div className="absolute right-0 top-full mt-1 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-10">
-                    Show/Hide Diff
-                  </div>
-                </div>
-              </div>
+              <SidePanelButton
+                icon={<FileDiff size={16} className="text-textSubtle hover:text-textStandard transition-colors duration-200" />}
+                tooltip="Show/Hide Diff"
+                onClick={() => {
+                  // Find the first tool request with diff content and toggle its diff
+                  const toolRequestWithDiff = toolRequests.find((toolRequest) => 
+                    hasDiffContent(toolResponsesMap.get(toolRequest.id))
+                  );
+                  if (toolRequestWithDiff) {
+                    const diffContent = extractDiffContent(toolResponsesMap.get(toolRequestWithDiff.id));
+                    if (diffContent) {
+                      window.pendingDiffContent = diffContent;
+                      window.dispatchEvent(new CustomEvent('toggle-diff-viewer'));
+                    }
+                  }
+                }}
+              />
             )}
             
             <div className="text-xs text-textSubtle pt-1 transition-all duration-200 group-hover:-translate-y-4 group-hover:opacity-0">
